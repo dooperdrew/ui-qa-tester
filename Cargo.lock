@@ -1402,6 +1402,7 @@ dependencies = [
  "ui-qa-core",
  "ui-qa-platform",
  "ui-qa-sdk",
+ "uuid",
 ]
 
 [[package]]
@@ -1427,6 +1428,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "ui-qa-ai",
  "ui-qa-core",
  "ui-qa-sdk",
  "windows",

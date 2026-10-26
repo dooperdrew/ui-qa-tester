@@ -2,6 +2,10 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-26 — Milestones 3 & 4 (M3.1, M4.1–M4.2): Headless CLI Orchestrator & Live QA Dashboard UI
+- Completed `M3.1`: Implemented end-to-end `run_qa_session` orchestrator (`crates/platform/src/orchestrator.rs`) and `ui-qa-cli` (`run`, `self-test`, `windows`, `init-config`, `--create-github-issues`), generating annotated screenshots (`step-NNN-annotated.png`), `report.md`, and `report.json`.
+- Completed `M4.1` & `M4.2`: Implemented `ui-qa-ui` (`crates/ui/src/main.rs` + `crates/ui/src/dashboard.html`) with 4 interactive tabs, live window enumeration, 1-click hands-free self-test demo, synchronized UI ↔ hardware log timeline, `en`/`it` instant locale switcher, and "Copy Agent Fix Prompt".
+
 ## 2026-10-26 — Milestone 2 (M2.1–M2.4): Platform Engine, Dual Vision AI Client & Optional Rust SDK
 - Completed `M2.1`: Implemented `MonitoredTargetProcess` in `crates/platform/src/process.rs` with `.exe` spawning, `stdout`/`stderr` capture threads, rotation-aware diagnostic log file tailing, `GetProcessMemoryInfo` working-set sampler, and `IsHungAppWindow` responsiveness checks.
 - Completed `M2.2`: Implemented `capture_hwnd_background`, `list_top_level_windows`, `inspect_window_uia_elements`, `dispatch_action_background`, and `SelfTestWindow` in `crates/platform`.

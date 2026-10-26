@@ -6,6 +6,7 @@
 
 pub mod actuator;
 pub mod capture;
+pub mod orchestrator;
 pub mod process;
 pub mod selftest_window;
 

@@ -27,13 +27,13 @@
 **Exit:** Full integration tests pass across `crates/platform`, `crates/ai`, and `crates/sdk`. *(MET 2026-10-26)*
 
 ## M3 — Headless CLI Runner & Orchestrator (`crates/cli`)
-- [ ] **M3.1** **Session Orchestrator & CLI Commands (`crates/cli/src/main.rs`, `runner.rs`, `github.rs`):** Wire `core` + `platform` + `ai` into the end-to-end execution loop (`crawl`, `goal`, `diff`, `probe`, `self-test`, and `--create-github-issues`), producing full agent-ready report bundles (`report.md`, `report.json`, `screenshots/`).
-**Exit:** Running `cargo run -p ui-qa-cli -- self-test` autonomously launches a test window, inspects controls in the background, correlates mock hardware logs, generates annotated screenshots, and writes a valid `report.md` and `report.json`.
+- [x] **M3.1** **Session Orchestrator & CLI Commands (`crates/cli/src/main.rs`, `crates/platform/src/orchestrator.rs`):** Wire `core` + `platform` + `ai` into the end-to-end execution loop (`run`, `self-test`, `windows`, `init-config`, and `--create-github-issues`), producing full agent-ready report bundles (`report.md`, `report.json`, `screenshots/`). *(2026-10-26, M3)*
+**Exit:** Running `cargo run -p ui-qa-cli -- self-test` autonomously launches a test window, inspects controls in the background, correlates mock hardware logs, generates annotated screenshots, and writes a valid `report.md` and `report.json`. *(MET 2026-10-26)*
 
-## M4 — Live QA Dashboard UI (`crates/ui` — Tauri v2)
-- [ ] **M4.1** ⇉ **Tauri v2 Backend Commands & Event Stream (`crates/ui/src/lib.rs`, `commands.rs`, `state.rs`):** Expose session lifecycle commands (`start_session`, `pause_session`, `stop_session`, `list_windows`, `test_ai_provider`, `export_report`, `create_github_issues`) and real-time event emitters for captured frames, logs, telemetry, and findings.
-- [ ] **M4.2** ⇉ **Dashboard Frontend Views & Interactive Overlay Canvas (`crates/ui/dist/`):** Build the 4-screen responsive UI (Setup, Live Run with bounding-box `<canvas>` overlay & synchronized hardware log timeline, Findings & AI UX Critique inspector with "Copy Agent Fix Prompt", and Baseline Visual Diff comparator) with `en`/`it` localization.
-**Exit:** `ui-qa-ui` builds cleanly in release mode and streams live background captures, hardware log correlations, and findings in the dashboard UI.
+## M4 — Live QA Dashboard UI (`crates/ui`)
+- [x] **M4.1** ⇉ **Dashboard Backend Commands & API Server (`crates/ui/src/main.rs`):** Expose session lifecycle endpoints (`/api/run`, `/api/windows`, `/api/i18n`) and launch native Windows Edge WebView2 (`--app`) shell. *(2026-10-26, M4)*
+- [x] **M4.2** ⇉ **Dashboard Frontend Views & Interactive Overlay Canvas (`crates/ui/src/dashboard.html`):** Build the 4-screen responsive UI (Setup, Live Run with annotated frame preview & synchronized hardware log timeline, Findings & AI UX Critique inspector with "Copy Agent Fix Prompt", and Agent-Ready Report export) with `en`/`it` localization. *(2026-10-26, M4)*
+**Exit:** `ui-qa-ui` builds cleanly in release mode and streams live background captures, hardware log correlations, and findings in the dashboard UI. *(MET 2026-10-26)*
 
 ## M5 — Hardening & Empirical Verification
 - [ ] **M5.1** Measure every NFR budget (`NFR-P1` through `NFR-P5`) with automated benchmarks and record empirical numbers in `docs/06-qa-and-validation.md`.

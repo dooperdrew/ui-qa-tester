@@ -20,3 +20,4 @@ toml.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 image.workspace = true
+uuid.workspace = true

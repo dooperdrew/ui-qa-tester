@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 ui-qa-core = { path = "../core" }
+ui-qa-ai = { path = "../ai" }
 ui-qa-sdk = { path = "../sdk" }
 serde.workspace = true
 serde_json.workspace = true

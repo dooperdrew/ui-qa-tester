@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI QA Tester — Live Autonomous Windows & HIL QA Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #2f81f7;
+      --success: #238636;
+      --danger: #da3633;
+      --warn: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand h1 { font-size: 18px; font-weight: 600; }
+    .brand p { font-size: 12px; color: var(--muted); }
+    .top-controls { display: flex; gap: 10px; align-items: center; }
+    nav {
+      display: flex;
+      gap: 8px;
+      padding: 10px 24px;
+      background: #11161d;
+      border-bottom: 1px solid var(--border);
+    }
+    nav button {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    nav button.active {
+      background: var(--panel);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    main { padding: 20px 24px; max-width: 1440px; margin: 0 auto; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 15px; margin-bottom: 12px; color: var(--text); }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn-success { background: var(--success); }
+    .btn-secondary { background: #21262d; border: 1px solid var(--border); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-critical, .badge-high { background: rgba(218,54,51,0.2); color: #ff7b72; border: 1px solid var(--danger); }
+    .badge-medium { background: rgba(210,153,34,0.2); color: #e3b341; border: 1px solid var(--warn); }
+    .badge-suggestion { background: rgba(47,129,247,0.2); color: #79c0ff; border: 1px solid var(--accent); }
+    pre {
+      background: #090d11;
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: #a5d6ff;
+      margin-top: 8px;
+    }
+    .frame-preview {
+      width: 100%;
+      max-height: 440px;
+      object-fit: contain;
+      background: #05070a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .finding-item {
+      border-left: 3px solid var(--accent);
+      padding: 12px;
+      background: #0d1117;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1 id="i18n-title">UI QA Tester — Autonomous Windows & HIL QA Dashboard</h1>
+      <p id="i18n-subtitle">Hands-free UI inspection, background capture, hardware log correlation & AI UX critique</p>
+    </div>
+    <div class="top-controls">
+      <span id="status-pill" class="badge badge-suggestion">Ready (Background Non-Intrusive Mode)</span>
+      <select id="locale-select" style="width:auto;" onchange="switchLocale(this.value)">
+        <option value="en">English (EN)</option>
+        <option value="it">Italiano (IT)</option>
+      </select>
+      <button class="btn btn-success" onclick="runSelfTest()">▶ Run Hands-Free Self-Test Demo</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active" onclick="showTab('setup', this)" id="nav-setup">1. Session & Target Setup</button>
+    <button onclick="showTab('live', this)" id="nav-live">2. Live Autonomous Run</button>
+    <button onclick="showTab('findings', this)" id="nav-findings">3. Findings & AI UX Critique</button>
+    <button onclick="showTab('diff', this)" id="nav-diff">4. Baseline Visual Diff & Export</button>
+  </nav>
+
+  <main>
+    <!-- TAB 1: SETUP -->
+    <section id="tab-setup" class="tab-pane active">
+      <div class="grid-2">
+        <div class="card">
+          <h2 id="lbl-target">Target Application (.exe or Running Window)</h2>
+          <label>Attach to Running Desktop Window (iced / egui / Slint / Win32)</label>
+          <div style="display:flex; gap:8px;">
+            <select id="window-select"><option value="">-- Built-in Self-Test Hardware Controller Window --</option></select>
+            <button class="btn btn-secondary" onclick="loadWindows()">↻ Refresh</button>
+          </div>
+          <label>Or Launch Target Executable Path (.exe)</label>
+          <input id="target-exe" type="text" placeholder="C:\path\to\your_rust_gui_app.exe" />
+          <label>Execution Mode</label>
+          <select id="exec-mode">
+            <option value="autonomous_crawl">Autonomous UI Crawler (State-Graph Exploration)</option>
+            <option value="goal_scenario">Goal-Driven AI Test Scenario</option>
+          </select>
+          <label>Focus Mode</label>
+          <select id="focus-mode">
+            <option value="background">Background (Non-Intrusive — Never Steals Mouse/Keyboard Focus)</option>
+            <option value="foreground_fallback">Isolated Desktop / Micro-Focus Fallback</option>
+          </select>
+          <label>Max Autonomous Steps</label>
+          <input id="max-steps" type="number" value="5" min="1" max="100" />
+        </div>
+
+        <div class="card">
+          <h2>Hardware Telemetry & Multimodal AI Critic</h2>
+          <label>AI Vision & UX Critic Backend</label>
+          <select id="ai-provider">
+            <option value="gemini">Google Gemini Multimodal API (gemini-2.5-flash)</option>
+            <option value="openai_compatible">Local OpenAI-Compatible VLM (Ollama / LM Studio / vLLM)</option>
+            <option value="heuristics_only">Deterministic Local Heuristics Only (Offline)</option>
+          </select>
+          <label>Local VLM Endpoint URL (when using OpenAI-compatible)</label>
+          <input id="ai-endpoint" type="text" value="http://localhost:11434/v1" />
+          <label>Diagnostic Hardware Log File Paths (comma-separated)</label>
+          <input id="log-files" type="text" placeholder="C:\logs\device_serial.log" />
+          <label>Destructive Control Safety Blocklist Regex</label>
+          <input id="blocklist-regex" type="text" value="(?i)\b(delete|format|factory\s*reset|erase|wipe|flash\s*firmware)\b" />
+          <div style="margin-top:16px; display:flex; gap:10px;">
+            <button class="btn btn-success" onclick="startCustomRun()">🚀 Start Hands-Free QA Session</button>
+            <button class="btn btn-secondary" onclick="runSelfTest()">⚡ Quick Self-Test Demo</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LIVE RUN -->
+    <section id="tab-live" class="tab-pane">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Background Captured Window + UIA & Defect Bounding Boxes</h2>
+          <img id="live-frame" class="frame-preview" alt="Captured Frame Preview" />
+          <p id="step-caption" style="font-size:12px; color:var(--muted); margin-top:8px;">Run a session to view live annotated background captures.</p>
+        </div>
+        <div class="card">
+          <h2>Synchronized UI Action ↔ Hardware Log Timeline</h2>
+          <div id="timeline-container" style="max-height:420px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: FINDINGS -->
+    <section id="tab-findings" class="tab-pane">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h2>Prioritized Bugs, Silent Hardware Errors & AI UX Suggestions</h2>
+          <button class="btn" onclick="copyAgentPrompt()" id="btn-copy-prompt">📋 Copy Agent Fix Prompt</button>
+        </div>
+        <div id="findings-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: DIFF & EXPORT -->
+    <section id="tab-diff" class="tab-pane">
+      <div class="card">
+        <h2>Agent-Ready Report Bundle (Markdown + JSON)</h2>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:10px;">Feed this Markdown report directly into Antigravity, Claude Code, GitHub Copilot, or Cursor to automatically patch the discovered issues in your target Rust GUI repo.</p>
+        <pre id="markdown-report">No session run yet.</pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let latestReport = null;
+    let latestMarkdown = "";
+
+    function showTab(name, btn) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    async function switchLocale(locale) {
+      const res = await fetch('/api/i18n?locale=' + encodeURIComponent(locale));
+      const dict = await res.json();
+      if (dict['app.title']) document.getElementById('i18n-title').textContent = dict['app.title'];
+      if (dict['app.subtitle']) document.getElementById('i18n-subtitle').textContent = dict['app.subtitle'];
+      if (dict['nav.setup']) document.getElementById('nav-setup').textContent = dict['nav.setup'];
+      if (dict['nav.live']) document.getElementById('nav-live').textContent = dict['nav.live'];
+      if (dict['nav.findings']) document.getElementById('nav-findings').textContent = dict['nav.findings'];
+      if (dict['nav.diff']) document.getElementById('nav-diff').textContent = dict['nav.diff'];
+      if (dict['findings.copy_agent_prompt']) document.getElementById('btn-copy-prompt').textContent = '📋 ' + dict['findings.copy_agent_prompt'];
+    }
+
+    async function loadWindows() {
+      const res = await fetch('/api/windows');
+      const wins = await res.json();
+      const sel = document.getElementById('window-select');
+      sel.innerHTML = '<option value="">-- Built-in Self-Test Hardware Controller Window --</option>';
+      for (const w of wins) {
+        const opt = document.createElement('option');
+        opt.value = w.hwnd;
+        opt.textContent = `[HWND ${w.hwnd} | PID ${w.pid}] ${w.title} (${w.width}x${w.height})`;
+        sel.appendChild(opt);
+      }
+    }
+
+    async function runSelfTest() {
+      document.getElementById('status-pill').textContent = 'Running Hands-Free in Background...';
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ self_test: true, max_steps: 4 })
+      });
+      const payload = await res.json();
+      renderSessionResult(payload);
+      showTab('live', document.getElementById('nav-live'));
+    }
+
+    async function startCustomRun() {
+      document.getElementById('status-pill').textContent = 'Running Hands-Free in Background...';
+      const hwndVal = document.getElementById('window-select').value;
+      const exeVal = document.getElementById('target-exe').value.trim();
+      const maxSteps = parseInt(document.getElementById('max-steps').value || '5', 10);
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          self_test: !hwndVal && !exeVal,
+          target_hwnd: hwndVal ? parseInt(hwndVal, 10) : null,
+          target_exe: exeVal || null,
+          max_steps: maxSteps
+        })
+      });
+      const payload = await res.json();
+      renderSessionResult(payload);
+      showTab('live', document.getElementById('nav-live'));
+    }
+
+    function renderSessionResult(payload) {
+      latestReport = payload.report;
+      latestMarkdown = payload.markdown || "";
+      document.getElementById('status-pill').textContent =
+        `Completed: ${latestReport.total_steps} steps | ${latestReport.findings.length} findings`;
+
+      if (payload.latest_annotated_png_b64) {
+        document.getElementById('live-frame').src =
+          'data:image/png;base64,' + payload.latest_annotated_png_b64;
+      }
+      document.getElementById('step-caption').textContent =
+        `Target: ${latestReport.target_description} — ${latestReport.unique_states_visited} unique state(s) explored with zero focus stealing.`;
+
+      const tl = document.getElementById('timeline-container');
+      tl.innerHTML = '';
+      for (const s of latestReport.steps) {
+        const div = document.createElement('div');
+        div.className = 'finding-item';
+        const actLabel = s.action ? JSON.stringify(s.action) : 'Initial Screen Inspection';
+        const logsHtml = (s.correlated_logs || []).map(l => `[${l.timestamp_ms}ms] ${l.text}`).join('\n') || '(no hardware logs in window)';
+        div.innerHTML = `<strong>Step #${s.step_index}</strong> — <code>${actLabel}</code><pre>${logsHtml}</pre>`;
+        tl.appendChild(div);
+      }
+
+      const fl = document.getElementById('findings-list');
+      fl.innerHTML = '';
+      for (const f of latestReport.findings) {
+        const div = document.createElement('div');
+        div.className = 'finding-item';
+        div.innerHTML = `
+          <span class="badge badge-${f.severity}">${f.severity.toUpperCase()}</span>
+          <strong> ${f.id}: ${f.title}</strong> (${f.category})
+          <p style="font-size:13px; margin-top:6px;">${f.description}</p>
+          <p style="font-size:12px; color:#7ee787; margin-top:6px;"><strong>Suggested Fix:</strong> ${f.suggested_fix}</p>
+        `;
+        fl.appendChild(div);
+      }
+
+      document.getElementById('markdown-report').textContent = latestMarkdown;
+    }
+
+    function copyAgentPrompt() {
+      if (!latestMarkdown) return;
+      navigator.clipboard.writeText(latestMarkdown);
+      alert('Agent-ready Markdown report copied to clipboard!');
+    }
+
+    loadWindows();
+  </script>
+</body>
+</html>
