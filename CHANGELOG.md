@@ -2,6 +2,12 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-26 — Milestone 2 (M2.1–M2.4): Platform Engine, Dual Vision AI Client & Optional Rust SDK
+- Completed `M2.1`: Implemented `MonitoredTargetProcess` in `crates/platform/src/process.rs` with `.exe` spawning, `stdout`/`stderr` capture threads, rotation-aware diagnostic log file tailing, `GetProcessMemoryInfo` working-set sampler, and `IsHungAppWindow` responsiveness checks.
+- Completed `M2.2`: Implemented `capture_hwnd_background`, `list_top_level_windows`, `inspect_window_uia_elements`, `dispatch_action_background`, and `SelfTestWindow` in `crates/platform`.
+- Completed `M2.3`: Implemented `UnifiedVisionClient` in `crates/ai` supporting both Google Gemini Multimodal API (`generateContent`) and OpenAI-compatible Vision endpoints (`/v1/chat/completions`), plus `plan_goal_step` and graceful fallback to deterministic heuristics.
+- Completed `M2.4`: Implemented `QaSdkServer`, `QaAppAdapter`, and `send_sdk_command` in `crates/sdk` (`#![forbid(unsafe_code)]`) for optional white-box widget inspection and synthetic input in `iced`/`egui`/`Slint` apps.
+
 ## 2026-10-26 — Milestone 1 (M1.1–M1.4): Core Engine & Schemas (`crates/core`)
 - Completed `M1.1`: Added `QaSessionConfig` TOML serializer/deserializer, `UiElement`/`Finding`/`QaStepRecord` domain models, and `I18nCatalog` (`en`/`it` parity verified).
 - Completed `M1.2`: Implemented `HardwareLogCorrelator` with `[-50 ms, +2000 ms]` action bracketing, regex ACK/error classification, silent UI-vs-hardware mismatch detection, and `< 2 ms` per 1,000-line throughput verification (`NFR-P3`).
