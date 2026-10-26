@@ -1,0 +1,81 @@
+name: "🤖 Agent Implementation Task"
+description: Standardized, bounded task specification for GitHub Copilot Agent or worker subagents
+title: "[Task]: "
+labels: ["agent-task", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when preparing a bounded, self-contained implementation task for **GitHub Copilot Agent** or autonomous worker subagents. Tasks created with this template enforce the **Sole Committer Protocol** and project performance/safety budgets.
+  - type: input
+    id: objective
+    attributes:
+      label: 🎯 Task Objective
+      description: Concise statement of what needs to be implemented and why.
+      placeholder: e.g. Implement UI action to hardware log correlation engine and unit tests
+    validations:
+      required: true
+  - type: dropdown
+    id: complexity_tier
+    attributes:
+      label: 📊 Complexity Tier
+      description: Architectural workload classification for dynamic model selection.
+      options:
+        - "Tier 1 (Lean) — Pure logic (crates/core), schemas, serialization, tests, i18n, docs"
+        - "Tier 2 (Moderate) — Tauri UI (crates/ui), AI client (crates/ai), SDK (crates/sdk), CLI (crates/cli)"
+        - "Tier 3 (Complex / Critical) — Win32 UIA/WGC/HWND (crates/platform), concurrency, watchdog"
+    validations:
+      required: true
+  - type: input
+    id: target_module
+    attributes:
+      label: 📦 Target Module / Boundary
+      description: Scope work to a single crate boundary whenever possible to prevent merge friction.
+      placeholder: e.g. crates/core, crates/platform, crates/ai, crates/ui
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: 📁 Target Files & Ownership
+      description: Explicit list of files the agent owns for this task.
+      placeholder: |
+        - crates/core/src/correlator.rs
+        - crates/core/tests/correlator_tests.rs
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: 🛡️ Architectural & Safety Invariants
+      options:
+        - label: "Pure Logic: Deterministic logic isolated from side effects and OS dependencies (#![forbid(unsafe_code)])"
+        - label: "Performance Budgets: Respect non-functional requirements (NFRs) defined in docs/02-requirements.md"
+        - label: "Safety & Memory: Zero unsafe operations outside crates/platform; all unsafe blocks carry // SAFETY: comments"
+        - label: "Localization: Zero hardcoded user-facing strings; all UI text goes through locales/*.json"
+        - label: "Claims Follow Evidence: Automated unit/invariant tests run locally; unverified behavior marked Pending"
+  - type: textarea
+    id: instructions
+    attributes:
+      label: 📝 Implementation Steps
+      description: Step-by-step instructions for the coding agent.
+      placeholder: |
+        1. Add new data models or methods to target crate
+        2. Implement core algorithms
+        3. Write comprehensive unit tests for normal, boundary, and error conditions
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: ✅ Verifiable Acceptance Criteria
+      description: Checkbox list of verifiable outcomes.
+      value: |
+        - [ ] Unit tests added covering new logic and edge cases
+        - [ ] cargo fmt --all -- --check passes
+        - [ ] cargo clippy --workspace --all-targets -- -D warnings passes with zero warnings
+        - [ ] cargo test --workspace passes cleanly
+        - [ ] cargo build --workspace --release succeeds
+        - [ ] Delivered as a Draft PR on a feature branch (Sole Committer Protocol)
+    validations:
+      required: true

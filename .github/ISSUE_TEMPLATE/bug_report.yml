@@ -1,0 +1,18 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: Steps to reproduce, expected vs actual }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Version / commit }
+    validations: { required: true }
+  - type: textarea
+    id: env
+    attributes: { label: Environment, description: Windows version, target GUI framework (iced/egui/Slint), hardware/device, relevant settings }
+  - type: textarea
+    id: logs
+    attributes: { label: Logs, render: text }

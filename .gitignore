@@ -1,0 +1,8 @@
+/target
+/dist
+*.pdb
+*.log
+.env
+.env.*
+node_modules/
+qa-output/
