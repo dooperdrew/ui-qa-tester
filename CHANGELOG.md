@@ -2,6 +2,12 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-26 — Milestone 1 (M1.1–M1.4): Core Engine & Schemas (`crates/core`)
+- Completed `M1.1`: Added `QaSessionConfig` TOML serializer/deserializer, `UiElement`/`Finding`/`QaStepRecord` domain models, and `I18nCatalog` (`en`/`it` parity verified).
+- Completed `M1.2`: Implemented `HardwareLogCorrelator` with `[-50 ms, +2000 ms]` action bracketing, regex ACK/error classification, silent UI-vs-hardware mismatch detection, and `< 2 ms` per 1,000-line throughput verification (`NFR-P3`).
+- Completed `M1.3`: Implemented `compute_dhash`, `compare_frames` (SSIM + pixel bounding-box diff + magenta diff overlay), `annotate_frame`, and `analyze_screen_heuristics` (overlapping controls, clipped bounds, missing AccessKit labels, WCAG luminance contrast ratio).
+- Completed `M1.4`: Implemented `AutonomousCrawler` state machine (with destructive-button regex blocklist and dead-control detector) and `QaSessionReport` (agent-ready Markdown + JSON + GitHub Issue draft generator).
+
 ## 2026-10-26 — Milestone 0 (M0.1–M0.5): Workspace Skeleton & Background Capture/Input Spikes
 - Completed `M0.1`: Created 7-crate Cargo workspace (`core`, `platform`, `ai`, `sdk`, `cli`, `ui`, `probe`), `rust-toolchain.toml`, and `en`/`it` localization catalogs (`locales/`).
 - Completed `M0.2` & `M0.3`: Built `ui-qa-probe` (`capture_probe.rs`, `input_probe.rs`, `dummy_window.rs`) and empirically verified background window capture (`PrintWindow` with `PW_RENDERFULLCONTENT`: `16.53 ms` p50, `20.82 ms` p95, `96%` non-black pixels, zero focus change) and non-intrusive input (`IUIAutomationInvokePattern` + `PostMessageW` mouse/key events with `10.14 ms` UIA walk latency and zero physical cursor movement).

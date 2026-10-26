@@ -2,6 +2,15 @@
 //! Pure domain models, state-graph crawler, hardware log correlator, visual diffing,
 //! local accessibility/geometry heuristics, and agent-ready report formatters.
 
+pub mod config;
+pub mod correlator;
+pub mod crawler;
+pub mod diff;
+pub mod i18n;
+pub mod model;
+pub mod report;
+pub mod vision_heuristics;
+
 pub fn workspace_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
