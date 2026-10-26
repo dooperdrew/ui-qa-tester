@@ -2,6 +2,9 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-26 — Milestone 7 (M7.1): Project Retrospective
+- Completed `M7.1`: Authored `docs/retrospective.md` documenting the M0–M6 delivery timeline, empirical NFR measurements, Windows UIA MSAA timeout discovery, and Rust 1.99 clippy lessons.
+
 ## 2026-10-26 — Release v0.1.0 (Milestones 5 & 6: Hardening, NFR Verification & Multi-Channel Release)
 - Completed `M5.1`–`M5.3`: Added `crates/platform/tests/hardening_tests.rs` verifying `NFR-P1` (`20.82 ms` release / `33.86 ms` debug p95 capture), `NFR-P2` (`18.88 ms` UIA + heuristics), `NFR-P3` (`8.52 ms` for `10,000` log lines), `NFR-P4` (`24.12 MB` working set RAM), `QA-SYS-04` (minimized window `SW_SHOWNOACTIVATE` restore without focus stealing), and `QA-SYS-05` (offline AI endpoint graceful fallback).
 - Completed `M6.1`–`M6.3`: Added `scripts/package-release.ps1`, `scripts/setup-wizard.ps1`, `scripts/install.ps1`, `scripts/uninstall.ps1`, `scripts/generate-manifests.ps1`, `setup.cmd`, `README.md`, `docs/user-guide.md`, Scoop/WinGet manifests (`packaging/`), and published `ui-qa-tester-v0.1.0-windows-x64.zip` to GitHub Releases.

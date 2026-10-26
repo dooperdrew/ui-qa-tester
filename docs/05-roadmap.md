@@ -49,4 +49,4 @@
 **Exit:** Pre-built `ui-qa-tester-v0.1.0-windows-x64.zip` and WinGet/Scoop manifests published and verified. *(MET 2026-10-26)*
 
 ## M7 — Retrospective
-- [ ] **M7.1** Run the `project-retrospective` skill, produce `docs/retrospective.md`, and promote generic `[KIT]` lessons into `project-kickstart`.
+- [x] **M7.1** Run the `project-retrospective` skill, produce `docs/retrospective.md`, and record `[KIT]` lessons in `docs/lessons-learned.md`. *(2026-10-26, M7)*
