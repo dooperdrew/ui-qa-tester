@@ -11,15 +11,15 @@
 - **F1.3** Monitor target process health at configurable intervals (default `250 ms`): working-set RAM, CPU usage %, thread count, process exit code, and Win32 window responsiveness (`IsHungAppWindow` + `SendMessageTimeoutW` with `SMTO_ABORTIFHUNG`).
 - **F1.4** Correlate log entries and health anomalies with the active UI action using a configurable time window (default `[-50 ms, +2000 ms]` around each interaction) and flag `PANIC`, `ERROR`, `WARN`, stack traces, or custom regex patterns (e.g. hardware timeout / NACK) as linked defects.
 
-### F2 — Non-Intrusive Window Capture & Visual Baseline Diffing 🔬 (M)
-- **F2.1** 🔬 Capture full-resolution screenshots of the target application's `HWND` even when the window is occluded behind other windows or located on a secondary monitor, using `Windows.Graphics.Capture` (WGC) or `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT)`.
+### F2 — Non-Intrusive Window Capture & Visual Baseline Diffing (M — Verified in M0.2)
+- **F2.1** Capture full-resolution screenshots of the target application's `HWND` even when the window is occluded behind other windows or located on a secondary monitor, using `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT)` (`16.53 ms` p50 verified in `docs/m0-spike-findings.md`) with `BitBlt` and `Windows.Graphics.Capture` (WGC) fallbacks.
 - **F2.2** Compute perceptual hashes (dHash/aHash) and structural similarity (SSIM) + pixel-level bounding-box diffs between consecutive states (to detect whether an action caused a visual change or spinner hang) and against saved baseline build snapshots.
 - **F2.3** Generate annotated PNG images highlighting detected visual defects, changed regions, or interacted control bounding boxes (`[x, y, width, height]` in client coordinates).
 - **F2.4 Fallback:** If a specific GPU swapchain (`wgpu` DX12/Vulkan) cannot be captured while minimized, automatically prevent minimization (keep window restored behind other windows or on a virtual/secondary display) and log a warning.
 
-### F3 — Hybrid UI Inspection & Non-Intrusive Input Injection (`iced`, `egui`, `Slint`) 🔬 (M)
-- **F3.1** 🔬 Inspect the target window's Windows UI Automation (`IUIAutomation`) tree exposed via `AccessKit` (`egui`, `Slint`, `iced`), extracting control IDs, names, localized control types, enabled/focused/checked states, values, and client-relative `BoundingRectangle`.
-- **F3.2** 🔬 Execute UI interactions in **Background Focus Mode** (`focus_mode = "background"`) without moving the user's physical mouse cursor or stealing active foreground window focus, using a 3-tier dispatch strategy:
+### F3 — Hybrid UI Inspection & Non-Intrusive Input Injection (`iced`, `egui`, `Slint`) (M — Verified in M0.3)
+- **F3.1** Inspect the target window's Windows UI Automation (`IUIAutomation`) tree exposed via `AccessKit` (`egui`, `Slint`, `iced`), extracting control IDs, names, localized control types, enabled/focused/checked states, values, and client-relative `BoundingRectangle` (skipping non-interactive structural control types for pattern queries to maintain `~10 ms` latency per `docs/m0-spike-findings.md`).
+- **F3.2** Execute UI interactions in **Background Focus Mode** (`focus_mode = "background"`) without moving the user's physical mouse cursor or stealing active foreground window focus, using a 3-tier dispatch strategy:
   1. **Tier 1 (UIA Patterns):** `IUIAutomationInvokePattern::Invoke`, `IUIAutomationValuePattern::SetValue`, `IUIAutomationTogglePattern::Toggle`, `IUIAutomationSelectionItemPattern::Select`, `IUIAutomationScrollPattern::Scroll`.
   2. **Tier 2 (Direct HWND Message Injection):** `PostMessageW` / `SendMessageTimeoutW` (`WM_MOUSEMOVE`, `WM_LBUTTONDOWN`, `WM_LBUTTONUP`, `WM_MOUSEWHEEL`, `WM_KEYDOWN`, `WM_KEYUP`, `WM_CHAR`) sent to the target `HWND` at the control's center coordinate (from UIA `BoundingRectangle` or Vision LLM grounding).
   3. **Tier 3 (Optional Rust SDK Bridge):** Named-pipe IPC command to `ui-qa-sdk` embedded in the target `egui`/`iced`/`Slint` app.

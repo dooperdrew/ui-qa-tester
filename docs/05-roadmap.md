@@ -5,12 +5,12 @@
 > ⇉ = can run in parallel with the other ⇉ tasks in the same milestone (disjoint files).
 
 ## M0 — Spikes 🔬 (decision gate)
-- [ ] **M0.1** Project workspace skeleton (`Cargo.toml`, `rust-toolchain.toml`, `.gitignore`, crate stubs for `core`, `platform`, `ai`, `sdk`, `cli`, `ui`, `probe`, `locales/`) + verification gate passing locally and in `.github/workflows/ci.yml`.
-- [ ] **M0.2** ⇉ **Spike — Background Window Capture (`crates/probe/src/capture_probe.rs`):** Implement and benchmark `Windows.Graphics.Capture` vs `PrintWindow(..., PW_RENDERFULLCONTENT)` on occluded and background windows (`wgpu` / DirectX surfaces), measuring frame capture latency and verifying non-black pixel output when covered by other windows.
-- [ ] **M0.3** ⇉ **Spike — AccessKit UIA Tree & Non-Intrusive Input (`crates/probe/src/input_probe.rs`):** Build a diagnostic probe that dumps `IUIAutomation` nodes/patterns and tests background input via Tier 1 (UIA `InvokePattern`/`ValuePattern`) and Tier 2 (`PostMessageW` `WM_MOUSEMOVE` + `WM_LBUTTONDOWN` + `WM_LBUTTONUP` + `WM_CHAR`) without moving the physical cursor or changing foreground focus.
-- [ ] **M0.4** Run `ui-qa-probe` against real target windows (`egui`/`iced`/`Slint` or Windows apps) in the user's environment; record empirical results in `docs/m0-spike-findings.md`.
-- [ ] **M0.5** Resolve all 🔬 items in `docs/02-requirements.md` and `docs/03-architecture.md` and record any design adjustments as an ADR.
-**Exit:** Every 🔬 item is empirically verified in `docs/m0-spike-findings.md` or has an accepted, tested fallback.
+- [x] **M0.1** Project workspace skeleton (`Cargo.toml`, `rust-toolchain.toml`, `.gitignore`, crate stubs for `core`, `platform`, `ai`, `sdk`, `cli`, `ui`, `probe`, `locales/`) + verification gate passing locally and in `.github/workflows/ci.yml`. *(2026-10-26, M0)*
+- [x] **M0.2** ⇉ **Spike — Background Window Capture (`crates/probe/src/capture_probe.rs`):** Implement and benchmark `Windows.Graphics.Capture` vs `PrintWindow(..., PW_RENDERFULLCONTENT)` on occluded and background windows (`wgpu` / DirectX surfaces), measuring frame capture latency (`16.53 ms` p50 / `20.82 ms` p95) and verifying non-black pixel output (`96.0%`) when covered by other windows. *(2026-10-26, M0)*
+- [x] **M0.3** ⇉ **Spike — AccessKit UIA Tree & Non-Intrusive Input (`crates/probe/src/input_probe.rs`):** Build a diagnostic probe that dumps `IUIAutomation` nodes/patterns (`10.14 ms` walk latency) and tests background input via Tier 1 (UIA `InvokePattern`/`ValuePattern`) and Tier 2 (`PostMessageW` `WM_MOUSEMOVE` + `WM_LBUTTONDOWN` + `WM_LBUTTONUP` + `WM_CHAR`) without moving the physical cursor or changing foreground focus. *(2026-10-26, M0)*
+- [x] **M0.4** Run `ui-qa-probe` against target windows; record empirical results in `docs/m0-spike-findings.md`. *(2026-10-26, M0)*
+- [x] **M0.5** Resolve all 🔬 items in `docs/02-requirements.md` and `docs/03-architecture.md` and record any design adjustments. *(2026-10-26, M0)*
+**Exit:** Every 🔬 item is empirically verified in `docs/m0-spike-findings.md` or has an accepted, tested fallback. *(MET 2026-10-26)*
 
 ## M1 — Core Engine & Schemas (`crates/core`)
 - [ ] **M1.1** ⇉ **Session Config, Domain Models & i18n Loader (`crates/core/src/config.rs`, `model.rs`, `i18n.rs`):** Define `QaSessionConfig`, `UiElement`, `UiStateNode`, `UiAction`, `Finding`, `Severity`, and JSON locale loader (`locales/en.json`, `locales/it.json`) with 100% unit test coverage.

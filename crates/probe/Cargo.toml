@@ -1,0 +1,19 @@
+[package]
+name = "ui-qa-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ui-qa-probe"
+path = "src/main.rs"
+
+[dependencies]
+ui-qa-core = { path = "../core" }
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+image.workspace = true
+windows.workspace = true

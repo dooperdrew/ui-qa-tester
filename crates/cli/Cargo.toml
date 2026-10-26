@@ -1,0 +1,22 @@
+[package]
+name = "ui-qa-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ui-qa-cli"
+path = "src/main.rs"
+
+[dependencies]
+ui-qa-core = { path = "../core" }
+ui-qa-platform = { path = "../platform" }
+ui-qa-ai = { path = "../ai" }
+ui-qa-sdk = { path = "../sdk" }
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+image.workspace = true

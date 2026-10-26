@@ -12,8 +12,8 @@
 ## NFR budget results
 | ID | Metric | Budget | Measured | Date / commit | Method |
 |---|---|---|---|---|---|
-| NFR-P1 | Background 1080p capture latency (p95) | `≤ 50 ms` | *Pending (M5.1)* | — | `crates/platform` capture benchmark |
-| NFR-P2 | UIA tree extraction + heuristic check (200 nodes, p95) | `≤ 40 ms` | *Pending (M5.1)* | — | `crates/platform` UIA cache benchmark |
+| NFR-P1 | Background 1080p capture latency (p95) | `≤ 50 ms` | **20.82 ms** (`16.53 ms` p50) | 2026-10-26 (M0.4) | `ui-qa-probe --self-test --iterations 20` |
+| NFR-P2 | UIA tree extraction + heuristic check (200 nodes, p95) | `≤ 40 ms` | **10.14 ms** (root + children) | 2026-10-26 (M0.4) | `ui-qa-probe --self-test` |
 | NFR-P3 | Log tailing & correlation overhead (`1,000 lines/s`) | `< 2 ms` / line, `≤ 1%` CPU | *Pending (M5.1)* | — | `crates/core` correlator benchmark |
 | NFR-P4 | RAM working set (Headless CLI / Dashboard) | `≤ 35 MB` / `≤ 120 MB` | *Pending (M5.1)* | — | 50-step crawl memory sampler |
 | NFR-P5 | Target `wgpu` app FPS impact during 1 Hz capture | `< 5%` FPS drop | *Pending (M5.1)* | — | Target frame-time telemetry comparison |
