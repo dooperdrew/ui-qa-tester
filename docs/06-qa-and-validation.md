@@ -12,11 +12,11 @@
 ## NFR budget results
 | ID | Metric | Budget | Measured | Date / commit | Method |
 |---|---|---|---|---|---|
-| NFR-P1 | Background 1080p capture latency (p95) | `≤ 50 ms` | **20.82 ms** (`16.53 ms` p50) | 2026-10-26 (M0.4) | `ui-qa-probe --self-test --iterations 20` |
-| NFR-P2 | UIA tree extraction + heuristic check (200 nodes, p95) | `≤ 40 ms` | **10.14 ms** (root + children) | 2026-10-26 (M0.4) | `ui-qa-probe --self-test` |
-| NFR-P3 | Log tailing & correlation overhead (`1,000 lines/s`) | `< 2 ms` / line, `≤ 1%` CPU | *Pending (M5.1)* | — | `crates/core` correlator benchmark |
-| NFR-P4 | RAM working set (Headless CLI / Dashboard) | `≤ 35 MB` / `≤ 120 MB` | *Pending (M5.1)* | — | 50-step crawl memory sampler |
-| NFR-P5 | Target `wgpu` app FPS impact during 1 Hz capture | `< 5%` FPS drop | *Pending (M5.1)* | — | Target frame-time telemetry comparison |
+| NFR-P1 | Background 1080p capture latency (p95) | `≤ 50 ms` | **20.82 ms** (release) / **33.86 ms** (debug) | 2026-10-26 (M5.1) | `ui-qa-probe` & `hardening_tests.rs` |
+| NFR-P2 | UIA tree extraction + heuristic check (200 nodes, p95) | `≤ 40 ms` | **18.88 ms** (`10.14 ms` walk + `8.74 ms` heuristics) | 2026-10-26 (M5.1) | `hardening_tests.rs` |
+| NFR-P3 | Log tailing & correlation overhead (`1,000 lines/s`) | `< 2 ms` / line, `≤ 1%` CPU | **0.85 ms per 1,000 lines** (`8.52 ms` for `10,000` lines) | 2026-10-26 (M5.1) | `hardening_tests.rs` |
+| NFR-P4 | RAM working set (Headless CLI / Dashboard) | `≤ 35 MB` / `≤ 120 MB` | **24.12 MB** (during 3-step autonomous crawl) | 2026-10-26 (M5.1) | `GetProcessMemoryInfo` in `hardening_tests.rs` |
+| NFR-P5 | Target `wgpu` app FPS impact during 1 Hz capture | `< 5%` FPS drop | *Pending (M5.4 real-app QA)* | — | Target frame-time telemetry comparison |
 
 ## Real-environment test matrix
 | Test ID | Area | Procedure | Expected | Result | Date / env / tester |
@@ -35,8 +35,8 @@
 | QA-SYS-01 | Target App Panic / Crash Recovery | Force target `.exe` to `panic!()` mid-crawl. | Watchdog captures exit code + panic backtrace from `stderr`, logs Critical finding, and terminates session cleanly without hanging. | Pending |
 | QA-SYS-02 | Target Window Freeze (`IsHungAppWindow`) | Block target UI thread for `> 5 s`. | Watchdog detects hung window via `IsHungAppWindow` / `SendMessageTimeoutW`, captures frozen frame, and reports UI hang defect. | Pending |
 | QA-SYS-03 | High-DPI Scaling (`125%` / `150%` / `200%`) | Run capture + bounding-box annotation on a high-DPI monitor. | UIA `BoundingRectangle` and Vision coordinates align within `±2 px` of rendered controls on the captured frame. | Pending |
-| QA-SYS-04 | Minimized Target Window Prevention | Minimize target window during an active background QA run. | Runner detects `IsIconic(hwnd)`, restores window in background (`SW_SHOWNOACTIVATE`) without stealing focus, and continues capture. | Pending |
-| QA-SYS-05 | AI Provider Network Failure / Rate Limit | Disconnect network or return HTTP 429 during Gemini critique. | Client retries with exponential backoff; if unreachable, degrades gracefully to deterministic local heuristics without aborting crawl. | Pending |
+| QA-SYS-04 | Minimized Target Window Prevention | Minimize target window during an active background QA run. | Runner detects `IsIconic(hwnd)`, restores window in background (`SW_SHOWNOACTIVATE`) without stealing focus, and continues capture. | **Pass** (2026-10-26, `hardening_tests.rs`) |
+| QA-SYS-05 | AI Provider Network Failure / Rate Limit | Disconnect network or return HTTP 429 during Gemini critique. | Client retries with exponential backoff; if unreachable, degrades gracefully to deterministic local heuristics without aborting crawl. | **Pass** (2026-10-26, `hardening_tests.rs`) |
 
 ## Incident protocol
 Any discrepancy: check `docs/m0-spike-findings.md` → if it's new, write a probe report + open an issue labelled `bug` → add a regression unit/integration test.

@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+PackageIdentifier: DooperDrew.UiQaTester
+PackageVersion: 0.1.0
+PackageLocale: en-US
+Publisher: DooperDrew
+PackageName: UI QA Tester
+PackageUrl: https://github.com/DooperDrew/ui-qa-tester
+License: MIT
+ShortDescription: Autonomous Windows UI and Hardware-in-the-Loop QA Agent for Rust Native GUI Apps
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0

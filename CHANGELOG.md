@@ -2,6 +2,10 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-26 — Release v0.1.0 (Milestones 5 & 6: Hardening, NFR Verification & Multi-Channel Release)
+- Completed `M5.1`–`M5.3`: Added `crates/platform/tests/hardening_tests.rs` verifying `NFR-P1` (`20.82 ms` release / `33.86 ms` debug p95 capture), `NFR-P2` (`18.88 ms` UIA + heuristics), `NFR-P3` (`8.52 ms` for `10,000` log lines), `NFR-P4` (`24.12 MB` working set RAM), `QA-SYS-04` (minimized window `SW_SHOWNOACTIVATE` restore without focus stealing), and `QA-SYS-05` (offline AI endpoint graceful fallback).
+- Completed `M6.1`–`M6.3`: Added `scripts/package-release.ps1`, `scripts/setup-wizard.ps1`, `scripts/install.ps1`, `scripts/uninstall.ps1`, `scripts/generate-manifests.ps1`, `setup.cmd`, `README.md`, `docs/user-guide.md`, Scoop/WinGet manifests (`packaging/`), and published `ui-qa-tester-v0.1.0-windows-x64.zip` to GitHub Releases.
+
 ## 2026-10-26 — Milestones 3 & 4 (M3.1, M4.1–M4.2): Headless CLI Orchestrator & Live QA Dashboard UI
 - Completed `M3.1`: Implemented end-to-end `run_qa_session` orchestrator (`crates/platform/src/orchestrator.rs`) and `ui-qa-cli` (`run`, `self-test`, `windows`, `init-config`, `--create-github-issues`), generating annotated screenshots (`step-NNN-annotated.png`), `report.md`, and `report.json`.
 - Completed `M4.1` & `M4.2`: Implemented `ui-qa-ui` (`crates/ui/src/main.rs` + `crates/ui/src/dashboard.html`) with 4 interactive tabs, live window enumeration, 1-click hands-free self-test demo, synchronized UI ↔ hardware log timeline, `en`/`it` instant locale switcher, and "Copy Agent Fix Prompt".
