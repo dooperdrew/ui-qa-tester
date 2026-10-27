@@ -89,8 +89,10 @@ pub fn analyze_screen_heuristics(
             let b = interactive[j];
             let overlap = a.bounds.intersection_area(&b.bounds);
             let min_area = a.bounds.area().min(b.bounds.area()).max(1);
-            // If two interactive controls overlap by > 15% of the smaller control's area (and aren't parent-child identical)
-            if overlap * 100 / min_area > 15 && a.bounds != b.bounds {
+            let max_area = a.bounds.area().max(b.bounds.area());
+            let is_parent_container = overlap == min_area && max_area > min_area * 2;
+            // If two sibling interactive controls overlap by > 15% of the smaller control's area
+            if !is_parent_container && overlap * 100 / min_area > 15 && a.bounds != b.bounds {
                 findings.push(Finding {
                     id: format!("VIS-OVERLAP-{step_index:03}-{i:02}-{j:02}"),
                     severity: Severity::High,
@@ -172,6 +174,9 @@ pub fn estimate_box_contrast_ratio(img: &RgbaImage, rect: &BoundingRect) -> Opti
     luminances.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let l_min = luminances[luminances.len() * 5 / 100];
     let l_max = luminances[luminances.len() * 95 / 100];
+    if (l_max - l_min).abs() < 1e-4 {
+        return None;
+    }
     Some((l_max + 0.05) / (l_min + 0.05))
 }
 

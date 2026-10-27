@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use ui_qa_core::model::{BoundingRect, ControlSource, UiAction, UiElement};
 use ui_qa_sdk::{send_sdk_command, SdkCommand};
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM, RECT, WPARAM};
+use windows::Win32::Foundation::{BOOL, HWND, LPARAM, POINT, RECT, WPARAM};
+use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
 };
@@ -111,19 +112,67 @@ pub fn inspect_window_uia_elements(hwnd_raw: isize) -> Result<Vec<UiElement>, St
             .map_err(|e| format!("ControlViewWalker failed: {e}"))?;
 
         let mut idx = 0usize;
-        if let Ok(first_child) = walker.GetFirstChildElement(&root_el) {
-            let mut current_opt: Option<IUIAutomationElement> = Some(first_child);
-            while let Some(el) = current_opt {
-                if let Some(ui_el) = convert_uia_element(&el, idx, origin_x, origin_y) {
-                    out.push(ui_el);
-                    idx += 1;
-                }
-                current_opt = walker.GetNextSiblingElement(&el).ok();
-            }
-        }
+        walk_uia_subtree(
+            &walker, &root_el, 1, 5, &mut idx, 120, origin_x, origin_y, &mut out,
+        );
     }
 
     Ok(out)
+}
+
+// SAFETY: Caller provides valid `IUIAutomationTreeWalker` and parent `IUIAutomationElement` on a COM-initialized thread.
+#[allow(clippy::too_many_arguments)]
+unsafe fn walk_uia_subtree(
+    walker: &windows::Win32::UI::Accessibility::IUIAutomationTreeWalker,
+    parent: &IUIAutomationElement,
+    depth: usize,
+    max_depth: usize,
+    idx: &mut usize,
+    max_elements: usize,
+    origin_x: i32,
+    origin_y: i32,
+    out: &mut Vec<UiElement>,
+) {
+    if depth > max_depth || *idx >= max_elements {
+        return;
+    }
+    let Ok(first_child) = walker.GetFirstChildElement(parent) else {
+        return;
+    };
+    let mut current_opt: Option<IUIAutomationElement> = Some(first_child);
+    while let Some(el) = current_opt {
+        if *idx >= max_elements {
+            break;
+        }
+        let control_type_id = el.CurrentControlType().map(|c| c.0).unwrap_or(0);
+        // Skip non-client TitleBar (50037) and MenuBar (50010) subtrees entirely to avoid MSAA proxy timeouts
+        if control_type_id != 50037 && control_type_id != 50010 {
+            if let Some(ui_el) = convert_uia_element(&el, *idx, origin_x, origin_y) {
+                // Only record non-structural controls or named interactive elements
+                let is_structural_wrapper = matches!(control_type_id, 50026 | 50032 | 50033)
+                    && ui_el.name.trim().is_empty()
+                    && !ui_el.supports_invoke;
+                if !is_structural_wrapper && ui_el.bounds.width > 0 && ui_el.bounds.height > 0 {
+                    out.push(ui_el);
+                    *idx += 1;
+                }
+            }
+            if depth < max_depth {
+                walk_uia_subtree(
+                    walker,
+                    &el,
+                    depth + 1,
+                    max_depth,
+                    idx,
+                    max_elements,
+                    origin_x,
+                    origin_y,
+                    out,
+                );
+            }
+        }
+        current_opt = walker.GetNextSiblingElement(&el).ok();
+    }
 }
 
 // SAFETY: Caller provides a valid `IUIAutomationElement` on a COM-initialized thread.
@@ -244,9 +293,15 @@ pub fn dispatch_action_background(
 
     let hwnd = HWND(hwnd_raw as *mut _);
     match action {
-        UiAction::Click { x, y, .. } => {
-            let cx = (*x).max(0) as usize & 0xFFFF;
-            let cy = (*y).max(0) as usize & 0xFFFF;
+        UiAction::Click {
+            element_name, x, y, ..
+        } => {
+            if *x <= 0 && *y <= 0 && !element_name.trim().is_empty() {
+                let _ = try_uia_invoke_by_name(hwnd, element_name);
+            }
+            let (client_x, client_y) = window_rel_to_client_coords(hwnd, *x, *y);
+            let cx = client_x.max(0) as usize & 0xFFFF;
+            let cy = client_y.max(0) as usize & 0xFFFF;
             let lparam = LPARAM(((cy << 16) | cx) as isize);
             // SAFETY: PostMessageW enqueues mouse events directly into the target HWND queue without moving the physical cursor.
             unsafe {
@@ -279,4 +334,81 @@ pub fn dispatch_action_background(
             Ok(())
         }
     }
+}
+
+fn window_rel_to_client_coords(hwnd: HWND, win_rel_x: i32, win_rel_y: i32) -> (i32, i32) {
+    // SAFETY: GetWindowRect and ClientToScreen read window/client screen origins without mutating state.
+    unsafe {
+        let mut win_rect = RECT::default();
+        if GetWindowRect(hwnd, &mut win_rect).is_err() {
+            return (win_rel_x, win_rel_y);
+        }
+        let mut client_origin = POINT { x: 0, y: 0 };
+        if !ClientToScreen(hwnd, &mut client_origin).as_bool() {
+            return (win_rel_x, win_rel_y);
+        }
+        let offset_x = (client_origin.x - win_rect.left).clamp(0, 64);
+        let offset_y = (client_origin.y - win_rect.top).clamp(0, 64);
+        ((win_rel_x - offset_x).max(0), (win_rel_y - offset_y).max(0))
+    }
+}
+
+fn try_uia_invoke_by_name(hwnd: HWND, target_name: &str) -> bool {
+    // SAFETY: Initializing COM and walking UIA tree up to depth 5 to invoke a matching element via IUIAutomationInvokePattern.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let Ok(uia) =
+            CoCreateInstance::<_, IUIAutomation>(&CUIAutomation, None, CLSCTX_INPROC_SERVER)
+        else {
+            return false;
+        };
+        let Ok(root_el) = uia.ElementFromHandle(hwnd) else {
+            return false;
+        };
+        let Ok(walker) = uia.ControlViewWalker() else {
+            return false;
+        };
+        invoke_matching_in_subtree(&walker, &root_el, target_name, 1, 5)
+    }
+}
+
+// SAFETY: Caller provides valid `IUIAutomationTreeWalker` and `IUIAutomationElement` on a COM-initialized thread.
+unsafe fn invoke_matching_in_subtree(
+    walker: &windows::Win32::UI::Accessibility::IUIAutomationTreeWalker,
+    parent: &IUIAutomationElement,
+    target_name: &str,
+    depth: usize,
+    max_depth: usize,
+) -> bool {
+    if depth > max_depth {
+        return false;
+    }
+    let Ok(first_child) = walker.GetFirstChildElement(parent) else {
+        return false;
+    };
+    let mut current_opt: Option<IUIAutomationElement> = Some(first_child);
+    while let Some(el) = current_opt {
+        let control_type_id = el.CurrentControlType().map(|c| c.0).unwrap_or(0);
+        if control_type_id != 50037 && control_type_id != 50010 {
+            let name = el.CurrentName().map(|b| b.to_string()).unwrap_or_default();
+            if name == target_name {
+                if let Ok(pat) = el.GetCurrentPattern(UIA_InvokePatternId) {
+                    if let Ok(inv) =
+                        windows::core::Interface::cast::<IUIAutomationInvokePattern>(&pat)
+                    {
+                        if inv.Invoke().is_ok() {
+                            return true;
+                        }
+                    }
+                }
+            }
+            if depth < max_depth
+                && invoke_matching_in_subtree(walker, &el, target_name, depth + 1, max_depth)
+            {
+                return true;
+            }
+        }
+        current_opt = walker.GetNextSiblingElement(&el).ok();
+    }
+    false
 }

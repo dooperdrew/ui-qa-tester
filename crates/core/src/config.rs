@@ -144,4 +144,13 @@ mod tests {
         assert_eq!(cfg, parsed);
         assert_eq!(parsed.focus_mode, FocusMode::Background);
     }
+
+    #[test]
+    fn parses_magicbridge_example_config_toml() {
+        let raw = include_str!("../../../examples/magicbridge-qa-session.toml");
+        let parsed = QaSessionConfig::from_toml_str(raw).expect("parse magicbridge example toml");
+        assert_eq!(parsed.session_name, "magicbridge-settings-hil-qa");
+        assert_eq!(parsed.focus_mode, FocusMode::Background);
+        assert_eq!(parsed.goals.len(), 5);
+    }
 }

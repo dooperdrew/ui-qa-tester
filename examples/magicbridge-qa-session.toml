@@ -1,0 +1,77 @@
+# =============================================================================
+# ui-qa-tester Example Session Configuration for MagicBridge
+# Target repository: https://github.com/DooperDrew/magicbridge
+#
+# Run headless QA session from the ui-qa-tester root:
+#   cargo run -p ui-qa-cli -- run --config examples/magicbridge-qa-session.toml
+# =============================================================================
+
+session_name = "magicbridge-settings-hil-qa"
+
+# Path to the compiled MagicBridge Settings GUI binary (eframe/egui 0.31)
+target_exe = 'C:\Dev\AgenticAI\magicbridge\target\release\magicbridge-settings.exe'
+target_args = []
+
+# Optional window title filter (attaches if already running, or verifies spawned window)
+target_window_title = "MagicBridge Settings"
+
+# Execution mode: "autonomous_crawl" or "goal_scenario"
+mode = "autonomous_crawl"
+
+# Strictly non-intrusive background mode: never steals physical mouse or keyboard focus
+focus_mode = "background"
+
+# Maximum UI exploration / goal steps
+max_steps = 8
+
+# Safety blocklist regex preventing accidental destructive clicks
+destructive_control_regex = '(?i)\b(delete|format|factory\s*reset|erase|wipe|uninstall|flash\s*firmware)\b'
+
+# Report & annotated screenshot output directory
+output_dir = "qa-reports/magicbridge"
+
+# Optional GitHub repository for one-click issue filing (`gh issue create --repo ...`)
+target_github_repo = "DooperDrew/magicbridge"
+
+# UI & report language ("en" or "it")
+locale = "en"
+
+[hardware]
+capture_stdout = true
+capture_stderr = true
+log_files = []
+correlation_pre_window_ms = 50
+correlation_post_window_ms = 1500
+ack_patterns = [
+    '(?i)\b(ack|ok|connected|ready|bound|synced|applied|saved)\b',
+    '(?i)(0xff00:0x0014|report\s*0x90|battery|a1843|namedpipe|profile)',
+]
+error_patterns = [
+    '(?i)\b(err|error|fail|failed|timeout|panic|disconnected|unreachable|denied)\b',
+    '(?i)(hid_error|hook_failed|pipe_busy|access_denied)',
+]
+
+[ai]
+# Switch `provider = "gemini"` (with GEMINI_API_KEY in env) or `provider = "open_ai_compatible"`
+# for cloud/local VLM visual critique alongside the deterministic AccessKit + pixel heuristics.
+provider = "heuristics_only"
+
+[[goals]]
+description = "Click Keyboard tab"
+expected_ui_text = "Keyboard"
+
+[[goals]]
+description = "Click Remapping tab"
+expected_ui_text = "Remapping"
+
+[[goals]]
+description = "Click Shortcuts tab"
+expected_ui_text = "Shortcuts"
+
+[[goals]]
+description = "Click Diagnostics tab"
+expected_ui_text = "Diagnostics"
+
+[[goals]]
+description = "Click About tab"
+expected_ui_text = "About"

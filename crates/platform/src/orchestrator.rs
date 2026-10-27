@@ -70,40 +70,64 @@ pub fn run_qa_session(
             &config.hardware.log_files,
         );
         (hwnd, mon, format!("Attached HWND {hwnd}"))
-    } else if let Some(ref title_sub) = config.target_window_title {
+    } else if let Some(existing_win) = config.target_window_title.as_ref().and_then(|title_sub| {
         let lower = title_sub.to_ascii_lowercase();
-        let win = list_top_level_windows()
+        list_top_level_windows()
             .into_iter()
             .find(|w| w.title.to_ascii_lowercase().contains(&lower))
-            .ok_or_else(|| format!("No visible window matching title '{title_sub}'"))?;
-        let mon =
-            MonitoredTargetProcess::attach_hwnd(win.hwnd, win.pid, &config.hardware.log_files);
+    }) {
+        let mon = MonitoredTargetProcess::attach_hwnd(
+            existing_win.hwnd,
+            existing_win.pid,
+            &config.hardware.log_files,
+        );
         (
-            win.hwnd,
+            existing_win.hwnd,
             mon,
-            format!("Window '{}' (PID {})", win.title, win.pid),
+            format!("Window '{}' (PID {})", existing_win.title, existing_win.pid),
         )
     } else if let Some(ref exe) = config.target_exe {
         let mut mon =
             MonitoredTargetProcess::spawn_exe(exe, &config.target_args, &config.hardware.log_files)
                 .map_err(|e| format!("Failed to spawn {:?}: {e}", exe))?;
-        thread::sleep(Duration::from_millis(450));
         let health = mon.sample_health();
-        let win = list_top_level_windows()
-            .into_iter()
-            .find(|w| w.pid == health.pid)
-            .ok_or_else(|| {
-                format!(
-                    "Spawned {:?} (PID {}) but found no top-level HWND",
-                    exe, health.pid
-                )
-            })?;
+        let title_lower = config
+            .target_window_title
+            .as_ref()
+            .map(|t| t.to_ascii_lowercase());
+        let mut found_win = None;
+        for _ in 0..20 {
+            thread::sleep(Duration::from_millis(150));
+            let wins = list_top_level_windows();
+            if let Some(w) = wins.into_iter().find(|w| {
+                w.pid == health.pid
+                    || title_lower
+                        .as_ref()
+                        .map(|t| w.title.to_ascii_lowercase().contains(t))
+                        .unwrap_or(false)
+            }) {
+                found_win = Some(w);
+                break;
+            }
+        }
+        let win = found_win.ok_or_else(|| {
+            format!(
+                "Spawned {:?} (PID {}) but found no top-level HWND within 3s",
+                exe, health.pid
+            )
+        })?;
+        // Allow GPU-accelerated GUI frameworks (egui/wgpu/iced/Slint) to present their first frame
+        thread::sleep(Duration::from_millis(250));
         mon.set_hwnd(win.hwnd);
         (
             win.hwnd,
             mon,
-            format!("{} (PID {})", exe.display(), health.pid),
+            format!("{} '{}' (PID {})", exe.display(), win.title, win.pid),
         )
+    } else if let Some(ref title_sub) = config.target_window_title {
+        return Err(format!(
+            "No visible window matching title '{title_sub}' and no target_exe configured"
+        ));
     } else {
         let win = SelfTestWindow::spawn()?;
         thread::sleep(Duration::from_millis(80));
@@ -284,7 +308,7 @@ pub fn run_qa_session(
             }
         }
         last_action = Some(act);
-        thread::sleep(Duration::from_millis(60));
+        thread::sleep(Duration::from_millis(120));
     }
 
     if let Some(mut win) = selftest_guard {
