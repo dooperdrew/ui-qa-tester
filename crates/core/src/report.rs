@@ -15,6 +15,12 @@ pub struct QaSessionReport {
     pub completed_at: DateTime<Utc>,
     pub total_steps: usize,
     pub unique_states_visited: usize,
+    #[serde(default)]
+    pub interactive_elements_discovered: usize,
+    #[serde(default)]
+    pub interactive_elements_exercised: usize,
+    #[serde(default)]
+    pub coverage_percentage: f64,
     pub findings: Vec<Finding>,
     pub steps: Vec<QaStepRecord>,
 }
@@ -52,6 +58,15 @@ impl QaSessionReport {
             "- **Unique UI States Discovered:** `{}`",
             self.unique_states_visited
         );
+        if self.interactive_elements_discovered > 0 {
+            let _ = writeln!(
+                md,
+                "- **Interactive Element Coverage:** `{}` / `{}` elements exercised (`{:.1}%`)",
+                self.interactive_elements_exercised,
+                self.interactive_elements_discovered,
+                self.coverage_percentage
+            );
+        }
 
         let critical_cnt = self
             .findings
@@ -249,6 +264,9 @@ mod tests {
             completed_at: Utc::now(),
             total_steps: 5,
             unique_states_visited: 3,
+            interactive_elements_discovered: 10,
+            interactive_elements_exercised: 8,
+            coverage_percentage: 80.0,
             findings: vec![finding],
             steps: Vec::new(),
         };

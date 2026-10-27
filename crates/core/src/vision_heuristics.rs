@@ -172,9 +172,14 @@ pub fn estimate_box_contrast_ratio(img: &RgbaImage, rect: &BoundingRect) -> Opti
     }
 
     luminances.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let l_min = luminances[luminances.len() * 2 / 100];
-    let l_max = luminances[(luminances.len().saturating_sub(1) * 99) / 100];
-    if (l_max - l_min).abs() < 1e-4 {
+    let n = luminances.len();
+    // Use 0.5% and 99.5% extremes to reliably capture micro-label character glyph strokes (e.g. "X", "Off")
+    let p_min_idx = (n / 200).min(n.saturating_sub(1));
+    let p_max_idx = ((n.saturating_sub(1) * 199) / 200).min(n.saturating_sub(1));
+    let l_min = luminances[p_min_idx];
+    let l_max = luminances[p_max_idx];
+    if (l_max - l_min).abs() < 0.05 {
+        // Less than 5% luminance variation indicates uniform background or solid container
         return None;
     }
     Some((l_max + 0.05) / (l_min + 0.05))
@@ -208,6 +213,7 @@ mod tests {
                 value: None,
                 is_enabled: true,
                 supports_invoke: true,
+                is_selected: None,
                 bounds: BoundingRect::new(20, 20, 100, 40),
                 source: ControlSource::UiaAccessKit,
             },
@@ -219,6 +225,7 @@ mod tests {
                 value: None,
                 is_enabled: true,
                 supports_invoke: true,
+                is_selected: None,
                 bounds: BoundingRect::new(50, 25, 100, 40), // Overlaps with btn1!
                 source: ControlSource::UiaAccessKit,
             },
@@ -230,6 +237,7 @@ mod tests {
                 value: None,
                 is_enabled: true,
                 supports_invoke: true,
+                is_selected: None,
                 bounds: BoundingRect::new(580, 100, 120, 40), // Overflows 640px width!
                 source: ControlSource::UiaAccessKit,
             },

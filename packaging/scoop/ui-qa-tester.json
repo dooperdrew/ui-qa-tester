@@ -6,7 +6,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.0/ui-qa-tester-v0.2.0-windows-x64.zip",
-      "hash": "774fd529748cfc77d13d30f73fabc14a507d145bdb82a4419642862286169dbf"
+      "hash": "f948e3341423b342fa96800f8ecd048e85fd95237152783369071913d83ecc63"
     }
   },
   "bin": [

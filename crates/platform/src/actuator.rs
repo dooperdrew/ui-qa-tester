@@ -6,13 +6,15 @@ use std::net::SocketAddr;
 use ui_qa_core::model::{BoundingRect, ControlSource, UiAction, UiElement};
 use ui_qa_sdk::{send_sdk_command, SdkCommand};
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Gdi::{ClientToScreen, ScreenToClient};
+use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
+use windows::Win32::Graphics::Gdi::ScreenToClient;
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
 };
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationInvokePattern,
-    UIA_InvokePatternId,
+    IUIAutomationSelectionItemPattern, IUIAutomationTogglePattern, UIA_InvokePatternId,
+    UIA_SelectionItemPatternId, UIA_TogglePatternId,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumChildWindows, EnumWindows, GetClassNameW, GetWindowRect, GetWindowTextLengthW,
@@ -110,9 +112,18 @@ pub fn inspect_window_uia_elements(hwnd_raw: isize) -> Result<Vec<UiElement>, St
 
     let hwnd = HWND(hwnd_raw as *mut _);
     let mut win_rect = RECT::default();
-    // SAFETY: GetWindowRect reads window screen origin so we can convert screen BoundingRectangles to window-relative coords.
+    // SAFETY: Query DWMWA_EXTENDED_FRAME_BOUNDS to get the true visible window bounds excluding Windows 11 drop shadow margins.
+    // Fall back to GetWindowRect if DwmGetWindowAttribute fails.
     unsafe {
-        let _ = GetWindowRect(hwnd, &mut win_rect);
+        let dwm_res = DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            &mut win_rect as *mut _ as *mut _,
+            std::mem::size_of::<RECT>() as u32,
+        );
+        if dwm_res.is_err() {
+            let _ = GetWindowRect(hwnd, &mut win_rect);
+        }
     }
     let origin_x = win_rect.left;
     let origin_y = win_rect.top;
@@ -143,9 +154,17 @@ pub fn inspect_window_uia_elements(hwnd_raw: isize) -> Result<Vec<UiElement>, St
         }
 
         // Chromium / WebView2 accessibility tree is constructed asynchronously on first query.
-        // If web controls haven't hydrated yet, wait 350ms and query child HWNDs once more.
-        if out.len() < 10 && !child_hwnds.is_empty() {
-            std::thread::sleep(std::time::Duration::from_millis(350));
+        // Only if a Chrome render widget is present and web controls haven't hydrated yet,
+        // wait for hydration and re-query child HWNDs once more.
+        let has_chrome_render = child_hwnds.iter().any(|c| {
+            let mut class_buf = vec![0u16; 128];
+            let len = GetClassNameW(*c, &mut class_buf);
+            len > 0
+                && String::from_utf16_lossy(&class_buf[..len as usize])
+                    == "Chrome_RenderWidgetHostHWND"
+        });
+        if has_chrome_render && out.len() < 10 {
+            std::thread::sleep(std::time::Duration::from_millis(250));
             for child in &child_hwnds {
                 if let Ok(child_el) = uia.ElementFromHandle(*child) {
                     walk_uia_subtree(
@@ -257,6 +276,30 @@ unsafe fn convert_uia_element(
         false
     };
 
+    // Check selection / toggle state for tab items, radio buttons, checkboxes (M2.2 tab idempotency)
+    let is_selected = if matches!(control_type_id, 50013 | 50019 | 50002) {
+        if let Ok(pat) = el.GetCurrentPattern(UIA_SelectionItemPatternId) {
+            if let Ok(sel) =
+                windows::core::Interface::cast::<IUIAutomationSelectionItemPattern>(&pat)
+            {
+                sel.CurrentIsSelected().map(|b| b.as_bool()).ok()
+            } else {
+                None
+            }
+        } else if let Ok(pat) = el.GetCurrentPattern(UIA_TogglePatternId) {
+            if let Ok(tog) = windows::core::Interface::cast::<IUIAutomationTogglePattern>(&pat) {
+                // ToggleState_On is 1
+                tog.CurrentToggleState().map(|s| s.0 == 1).ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let rel_x = (rect.left - origin_x).max(0);
     let rel_y = (rect.top - origin_y).max(0);
     let width = (rect.right - rect.left).max(0) as u32;
@@ -282,6 +325,7 @@ unsafe fn convert_uia_element(
         value: None,
         is_enabled,
         supports_invoke,
+        is_selected,
         bounds: BoundingRect::new(rel_x, rel_y, width, height),
         source: ControlSource::UiaAccessKit,
     })
@@ -316,7 +360,10 @@ pub fn find_render_widget_target(hwnd: HWND) -> HWND {
             }
         }
     }
-    find_child_windows_for_hwnd(hwnd).first().copied().unwrap_or(hwnd)
+    find_child_windows_for_hwnd(hwnd)
+        .first()
+        .copied()
+        .unwrap_or(hwnd)
 }
 
 /// Dispatches a `UiAction` in the background without stealing focus using:
@@ -359,9 +406,17 @@ pub fn dispatch_action_background(
             let _ = !element_name.trim().is_empty() && try_uia_invoke_by_name(hwnd, element_name);
             let target_hwnd = find_render_widget_target(hwnd);
             let mut top_rect = RECT::default();
-            // SAFETY: GetWindowRect reads screen origin of top-level window.
+            // SAFETY: Query DWMWA_EXTENDED_FRAME_BOUNDS or GetWindowRect for screen origin of top-level window.
             unsafe {
-                let _ = GetWindowRect(hwnd, &mut top_rect);
+                let dwm_res = DwmGetWindowAttribute(
+                    hwnd,
+                    DWMWA_EXTENDED_FRAME_BOUNDS,
+                    &mut top_rect as *mut _ as *mut _,
+                    std::mem::size_of::<RECT>() as u32,
+                );
+                if dwm_res.is_err() {
+                    let _ = GetWindowRect(hwnd, &mut top_rect);
+                }
             }
             let mut pt = POINT {
                 x: top_rect.left + *x,

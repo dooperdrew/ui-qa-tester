@@ -18,7 +18,8 @@ use ui_qa_core::correlator::HardwareLogCorrelator;
 use ui_qa_core::crawler::AutonomousCrawler;
 use ui_qa_core::diff::{annotate_frame, compare_frames, compute_dhash, dhash_distance};
 use ui_qa_core::model::{
-    BoundingRect, Finding, FindingCategory, LogStreamKind, QaStepRecord, Severity, UiAction,
+    ActionTrace, ActionTraceStep, BoundingRect, Finding, FindingCategory, LogStreamKind,
+    QaStepRecord, Severity, UiAction,
 };
 use ui_qa_core::report::QaSessionReport;
 
@@ -150,6 +151,8 @@ pub fn run_qa_session(
     let max_steps = config.max_steps.clamp(1, 200);
     let mut all_findings: Vec<Finding> = Vec::new();
     let mut step_records: Vec<QaStepRecord> = Vec::new();
+    let mut action_trace_steps: Vec<ActionTraceStep> = Vec::new();
+    let mut discovered_element_ids = std::collections::HashSet::new();
     let mut prev_state_hash: Option<String> = None;
     let mut prev_dhash: Option<u64> = None;
     let mut last_action: Option<UiAction> = None;
@@ -158,6 +161,11 @@ pub fn run_qa_session(
         let action_ts_ms = proc_mon.elapsed_ms();
         let cap = capture_hwnd_background(hwnd_raw)?;
         let elements = inspect_window_uia_elements(hwnd_raw).unwrap_or_default();
+        for el in &elements {
+            if el.is_interactive() {
+                discovered_element_ids.insert(el.id.clone());
+            }
+        }
         let dhash = compute_dhash(&cap.image);
         let state_hash = AutonomousCrawler::compute_state_hash(&elements, dhash);
 
@@ -217,6 +225,14 @@ pub fn run_qa_session(
         if let (Some(prev_h), Some(prev_d), Some(act)) =
             (&prev_state_hash, prev_dhash, last_action.as_ref())
         {
+            let is_idempotent_or_selected = match act {
+                UiAction::Click { element_id, .. } => elements
+                    .iter()
+                    .find(|e| &e.id == element_id)
+                    .and_then(|e| e.is_selected)
+                    .unwrap_or(false),
+                _ => false,
+            };
             if let Some(dead_f) = crawler.evaluate_transition(
                 step_idx,
                 prev_h,
@@ -224,6 +240,7 @@ pub fn run_qa_session(
                 dhash_distance(prev_d, dhash),
                 act,
                 corr.matched_logs.len(),
+                is_idempotent_or_selected,
             ) {
                 step_findings.push(dead_f);
             }
@@ -281,12 +298,23 @@ pub fn run_qa_session(
             findings: step_findings,
         });
 
-        prev_state_hash = Some(state_hash);
+        prev_state_hash = Some(state_hash.clone());
         prev_dhash = Some(dhash);
 
         let Some(act) = next_action else {
             break;
         };
+
+        // Record exercised interactive element
+        crawler.record_exercised_element(act.target_element_id());
+
+        // Record step in deterministic action trace
+        action_trace_steps.push(ActionTraceStep {
+            step_index: step_idx,
+            timestamp_ms: proc_mon.elapsed_ms(),
+            action: act.clone(),
+            target_state_hash: state_hash.clone(),
+        });
 
         // Execute the action in background without stealing focus
         let _ = dispatch_action_background(hwnd_raw, &act, None);
@@ -308,17 +336,37 @@ pub fn run_qa_session(
             }
         }
         last_action = Some(act);
-        thread::sleep(Duration::from_millis(120));
+        thread::sleep(Duration::from_millis(config.post_action_settle_ms.max(80)));
     }
 
     if let Some(mut win) = selftest_guard {
         win.close();
     }
-    proc_mon.terminate();
+    proc_mon.terminate_with_strategy(&config.teardown_strategy);
+
+    // Save deterministic action trace for bug reproduction and replay
+    let action_trace = ActionTrace {
+        session_name: config.session_name.clone(),
+        created_at: started_at,
+        target_description: target_desc.clone(),
+        steps: action_trace_steps,
+    };
+    let trace_path = config.output_dir.join("action-trace.json");
+    if let Ok(trace_json) = serde_json::to_string_pretty(&action_trace) {
+        let _ = std::fs::write(&trace_path, trace_json);
+    }
 
     // Deduplicate findings by title so repeated observations across steps stay concise
     let mut unique_titles = std::collections::HashSet::new();
     all_findings.retain(|f| unique_titles.insert(f.title.clone()));
+
+    let interactive_elements_discovered = discovered_element_ids.len();
+    let interactive_elements_exercised = crawler.exercised_element_count();
+    let coverage_percentage = if interactive_elements_discovered > 0 {
+        (interactive_elements_exercised as f64 / interactive_elements_discovered as f64) * 100.0
+    } else {
+        100.0
+    };
 
     let report = QaSessionReport {
         session_name: config.session_name.clone(),
@@ -327,6 +375,9 @@ pub fn run_qa_session(
         completed_at: Utc::now(),
         total_steps: step_records.len(),
         unique_states_visited: crawler.visited_state_count().max(1),
+        interactive_elements_discovered,
+        interactive_elements_exercised,
+        coverage_percentage,
         findings: all_findings,
         steps: step_records,
     };
@@ -347,4 +398,64 @@ pub fn run_qa_session(
         report_json_path,
         screenshots_dir,
     })
+}
+
+/// Replays a deterministic `ActionTrace` JSON against a running target window or spawned executable.
+pub fn replay_action_trace(
+    config: &QaSessionConfig,
+    trace_path: &std::path::Path,
+    stop_at_step: Option<usize>,
+) -> Result<PathBuf, String> {
+    let trace_bytes = std::fs::read_to_string(trace_path)
+        .map_err(|e| format!("Failed to read trace file {:?}: {e}", trace_path))?;
+    let trace: ActionTrace = serde_json::from_str(&trace_bytes)
+        .map_err(|e| format!("Failed to parse action trace JSON: {e}"))?;
+
+    let max_step = stop_at_step.unwrap_or(usize::MAX);
+    let replay_dir = config.output_dir.join("replay");
+    std::fs::create_dir_all(&replay_dir)
+        .map_err(|e| format!("Failed to create replay dir {:?}: {e}", replay_dir))?;
+
+    let existing_win = if let Some(hwnd) = config.target_hwnd {
+        Some((hwnd, format!("Attached HWND {hwnd}")))
+    } else if let Some(ref title) = config.target_window_title {
+        let lower = title.to_ascii_lowercase();
+        list_top_level_windows()
+            .into_iter()
+            .find(|w| w.title.to_ascii_lowercase().contains(&lower))
+            .map(|w| (w.hwnd, w.title))
+    } else {
+        None
+    };
+
+    let Some((hwnd_raw, title)) = existing_win else {
+        return Err("Cannot replay trace: Target window not found. Please specify target_window_title or target_hwnd in config.".to_string());
+    };
+
+    let mut executed_count = 0;
+    for step in trace.steps.into_iter() {
+        if step.step_index > max_step {
+            break;
+        }
+        let _ = dispatch_action_background(hwnd_raw, &step.action, None);
+        executed_count += 1;
+        thread::sleep(Duration::from_millis(config.post_action_settle_ms.max(150)));
+
+        if let Ok(cap) = capture_hwnd_background(hwnd_raw) {
+            let p = replay_dir.join(format!("replay-step-{:03}.png", step.step_index));
+            let _ = cap.image.save(&p);
+        }
+    }
+
+    let summary_path = replay_dir.join("replay-summary.md");
+    let summary_md = format!(
+        "# Action Trace Replay Summary\n\n- **Target Window:** {title} (`HWND {hwnd_raw}`)\n- **Trace Source:** `{}`\n- **Steps Replayed:** {executed_count}\n- **Stop At Step:** {:?}\n- **Replay Artifacts:** `{}`\n",
+        trace_path.display(),
+        stop_at_step,
+        replay_dir.display()
+    );
+    std::fs::write(&summary_path, summary_md)
+        .map_err(|e| format!("Failed to write replay summary: {e}"))?;
+
+    Ok(summary_path)
 }

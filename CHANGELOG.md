@@ -2,6 +2,27 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-27 — Release v0.2.1 (RFC Feedback Integration: Deterministic Replay, Tab Idempotency, DWM Calibration, Multi-HWND & Automated Issue Sync)
+- **Tab & Toggle Idempotency (`UX-DEAD-BTN` Fix):**
+  - Queried `UIA_SelectionItemPatternId` and `UIA_TogglePatternId` in `crates/platform/src/actuator.rs` to populate `UiElement::is_selected`.
+  - Updated `AutonomousCrawler::evaluate_transition` to accept `is_idempotent_or_selected`, eliminating false-positive dead button warnings when re-clicking active tabs or radio toggles.
+- **DWM Extended Frame Bounds Calibration:**
+  - Integrated `DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS)` from `windows::Win32::Graphics::Dwm` to eliminate Windows 11 drop-shadow margin offsets (~8px) in coordinate translation.
+- **Multi-HWND & Embedded Renderer Support (Tauri / WebView2):**
+  - Added recursive detection for `Chrome_RenderWidgetHostHWND` in `actuator.rs` and coordinate mapping via `ScreenToClient(render_hwnd)`, routing background input directly to embedded web controls.
+- **Deterministic Action Trace & Replay:**
+  - Added `ActionTrace` and `ActionTraceStep` structs to `crates/core/src/model.rs`, recording complete interaction sequences into `action-trace.json`.
+  - Added `replay_action_trace` orchestrator and `ui-qa-cli replay --trace <path> [--stop-at-step N]` for reproduction of bug sequences.
+- **Interactive Element Coverage Reporting:**
+  - Added `interactive_elements_discovered`, `interactive_elements_exercised`, and `coverage_percentage` to `QaSessionReport` and `report.md`.
+- **Automated Issue Sync & Deduplication:**
+  - Added `ui-qa-cli sync-issues` subcommand and `--sync-github-issues` flag on `run`, checking existing open issues via `gh issue list` to prevent duplicate GitHub issues.
+- **CI/CD Quality Gates & Process Teardown:**
+  - Added `--fail-on <severity>` and `--max-findings <n>` CLI gate flags with non-zero exit codes.
+  - Implemented `teardown_strategy = "force_kill"` via `taskkill /F /T /PID` to cleanly terminate tray apps and background process trees.
+- **Continuous Watch Mode:**
+  - Added `ui-qa-cli watch --config qa-session.toml` to monitor target executable timestamps and automatically re-crawl on every new build, outputting build-to-build delta reports (`delta.md`).
+
 ## 2026-10-27 — Release v0.2.0 (Milestones 8 & 9: UX Onboarding, Responsive Dashboard, Self-Test QA Matrix & Architecture Explorer)
 - **M9.1 (Guided Windows Setup Wizard):**
   - Enhanced `scripts/setup-wizard.ps1` with a complete Windows Forms GUI wizard (install destination, Desktop/Start Menu shortcuts, User PATH registration, Windows Settings "Installed apps" uninstaller registration in `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UiQaTester`).

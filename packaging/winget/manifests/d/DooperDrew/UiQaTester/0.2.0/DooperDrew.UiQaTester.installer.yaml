@@ -13,6 +13,6 @@ NestedInstallerFiles:
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.0/ui-qa-tester-v0.2.0-windows-x64.zip
-    InstallerSha256: 774FD529748CFC77D13D30F73FABC14A507D145BDB82A4419642862286169DBF
+    InstallerSha256: F948E3341423B342FA96800F8ECD048E85FD95237152783369071913D83ECC63
 ManifestType: installer
 ManifestVersion: 1.6.0

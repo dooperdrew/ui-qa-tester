@@ -379,6 +379,7 @@ mod tests {
             value: None,
             is_enabled: true,
             supports_invoke: true,
+            is_selected: None,
             bounds: BoundingRect::new(40, 60, 100, 28),
             source: ControlSource::UiaAccessKit,
         }];

@@ -78,6 +78,14 @@ pub struct QaGoalStep {
     pub expected_log_regex: Option<String>,
 }
 
+fn default_post_action_settle_ms() -> u64 {
+    150
+}
+
+fn default_teardown_strategy() -> String {
+    "force_kill".to_string()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QaSessionConfig {
     pub session_name: String,
@@ -85,9 +93,15 @@ pub struct QaSessionConfig {
     pub target_args: Vec<String>,
     pub target_hwnd: Option<isize>,
     pub target_window_title: Option<String>,
+    #[serde(default)]
+    pub framework: Option<String>,
     pub mode: ExecutionMode,
     pub focus_mode: FocusMode,
     pub max_steps: usize,
+    #[serde(default = "default_post_action_settle_ms")]
+    pub post_action_settle_ms: u64,
+    #[serde(default = "default_teardown_strategy")]
+    pub teardown_strategy: String,
     pub destructive_control_regex: String,
     pub hardware: HardwareTelemetryConfig,
     pub ai: AiProviderConfig,
@@ -95,6 +109,10 @@ pub struct QaSessionConfig {
     pub baseline_dir: Option<PathBuf>,
     pub output_dir: PathBuf,
     pub target_github_repo: Option<String>,
+    #[serde(default)]
+    pub fail_on_severity: Option<crate::model::Severity>,
+    #[serde(default)]
+    pub max_findings_threshold: Option<usize>,
     pub locale: String,
 }
 
@@ -106,9 +124,12 @@ impl Default for QaSessionConfig {
             target_args: Vec::new(),
             target_hwnd: None,
             target_window_title: None,
+            framework: None,
             mode: ExecutionMode::AutonomousCrawl,
             focus_mode: FocusMode::Background,
             max_steps: 50,
+            post_action_settle_ms: 150,
+            teardown_strategy: "force_kill".to_string(),
             destructive_control_regex:
                 r"(?i)\b(delete|format|factory\s*reset|erase|wipe|flash\s*firmware)\b".to_string(),
             hardware: HardwareTelemetryConfig::default(),
@@ -117,6 +138,8 @@ impl Default for QaSessionConfig {
             baseline_dir: None,
             output_dir: PathBuf::from("qa-output"),
             target_github_repo: None,
+            fail_on_severity: None,
+            max_findings_threshold: None,
             locale: "en".to_string(),
         }
     }

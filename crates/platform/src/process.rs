@@ -196,11 +196,24 @@ impl MonitoredTargetProcess {
     }
 
     pub fn terminate(&mut self) {
+        self.terminate_with_strategy("force_kill");
+    }
+
+    /// Terminates the monitored process using either standard kill or aggressive process-tree teardown (`taskkill /F /T /PID`).
+    pub fn terminate_with_strategy(&mut self, strategy: &str) {
         self.stop_flag
             .store(true, std::sync::atomic::Ordering::SeqCst);
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
+        }
+        if strategy == "force_kill" && self.pid > 0 && self.pid != std::process::id() {
+            // Ensure process tree and tray background daemons are terminated cleanly
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &self.pid.to_string()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
         }
     }
 }

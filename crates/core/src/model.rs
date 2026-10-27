@@ -64,8 +64,21 @@ pub struct UiElement {
     pub value: Option<String>,
     pub is_enabled: bool,
     pub supports_invoke: bool,
+    #[serde(default)]
+    pub is_selected: Option<bool>,
     pub bounds: BoundingRect,
     pub source: ControlSource,
+}
+
+impl UiElement {
+    pub fn is_interactive(&self) -> bool {
+        self.is_enabled
+            && (self.supports_invoke
+                || matches!(
+                    self.control_type_id,
+                    50000 | 50002 | 50003 | 50004 | 50005 | 50007 | 50011 | 50013 | 50019 | 50031
+                ))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -85,6 +98,16 @@ pub enum UiAction {
         element_id: String,
         element_name: String,
     },
+}
+
+impl UiAction {
+    pub fn target_element_id(&self) -> &str {
+        match self {
+            UiAction::Click { element_id, .. } => element_id,
+            UiAction::InputText { element_id, .. } => element_id,
+            UiAction::Toggle { element_id, .. } => element_id,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -159,6 +182,22 @@ pub struct QaStepRecord {
     pub correlated_logs: Vec<TimestampedLogLine>,
     pub health: Option<ProcessHealthSample>,
     pub findings: Vec<Finding>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActionTraceStep {
+    pub step_index: usize,
+    pub timestamp_ms: u64,
+    pub action: UiAction,
+    pub target_state_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActionTrace {
+    pub session_name: String,
+    pub created_at: DateTime<Utc>,
+    pub target_description: String,
+    pub steps: Vec<ActionTraceStep>,
 }
 
 #[cfg(test)]

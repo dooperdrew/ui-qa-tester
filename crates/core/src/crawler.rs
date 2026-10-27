@@ -11,6 +11,7 @@ pub struct AutonomousCrawler {
     destructive_regex: Regex,
     visited_states: HashSet<String>,
     executed_actions_per_state: HashMap<String, HashSet<String>>,
+    exercised_element_ids: HashSet<String>,
     dead_controls: Vec<Finding>,
 }
 
@@ -20,6 +21,7 @@ impl AutonomousCrawler {
             destructive_regex: Regex::new(destructive_pattern)?,
             visited_states: HashSet::new(),
             executed_actions_per_state: HashMap::new(),
+            exercised_element_ids: HashSet::new(),
             dead_controls: Vec::new(),
         })
     }
@@ -83,8 +85,18 @@ impl AutonomousCrawler {
         None
     }
 
+    pub fn record_exercised_element(&mut self, element_id: &str) {
+        self.exercised_element_ids.insert(element_id.to_string());
+    }
+
+    pub fn exercised_element_count(&self) -> usize {
+        self.exercised_element_ids.len()
+    }
+
     /// Checks whether clicking an interactive control produced neither a visual/structural change
     /// nor any hardware/stdout log activity (indicating a dead/unwired UI button).
+    /// Suppresses false positives when an already-selected tab/toggle is re-clicked (`is_idempotent_or_selected = true`).
+    #[allow(clippy::too_many_arguments)]
     pub fn evaluate_transition(
         &mut self,
         step_index: usize,
@@ -93,7 +105,11 @@ impl AutonomousCrawler {
         dhash_dist: u32,
         action: &UiAction,
         emitted_log_count: usize,
+        is_idempotent_or_selected: bool,
     ) -> Option<Finding> {
+        if is_idempotent_or_selected {
+            return None;
+        }
         if prev_state_hash == new_state_hash && dhash_dist == 0 && emitted_log_count == 0 {
             let label = match action {
                 UiAction::Click { element_name, .. } => element_name.as_str(),
@@ -147,6 +163,7 @@ mod tests {
                 value: None,
                 is_enabled: true,
                 supports_invoke: true,
+                is_selected: None,
                 bounds: BoundingRect::new(10, 10, 120, 36),
                 source: ControlSource::UiaAccessKit,
             },
@@ -158,6 +175,7 @@ mod tests {
                 value: None,
                 is_enabled: true,
                 supports_invoke: true,
+                is_selected: None,
                 bounds: BoundingRect::new(10, 60, 120, 36),
                 source: ControlSource::UiaAccessKit,
             },
@@ -176,8 +194,11 @@ mod tests {
         // Next call on same state should return None because all non-destructive buttons were tried
         assert!(crawler.select_next_action(&state, &elements).is_none());
 
-        // Evaluate dead transition
-        let dead = crawler.evaluate_transition(1, &state, &state, 0, &action, 0);
+        // Evaluate dead transition (idempotent = false => dead finding; idempotent = true => None)
+        let dead = crawler.evaluate_transition(1, &state, &state, 0, &action, 0, false);
         assert!(dead.is_some());
+
+        let idempotent = crawler.evaluate_transition(2, &state, &state, 0, &action, 0, true);
+        assert!(idempotent.is_none());
     }
 }
