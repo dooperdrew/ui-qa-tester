@@ -172,8 +172,8 @@ pub fn estimate_box_contrast_ratio(img: &RgbaImage, rect: &BoundingRect) -> Opti
     }
 
     luminances.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let l_min = luminances[luminances.len() * 5 / 100];
-    let l_max = luminances[luminances.len() * 95 / 100];
+    let l_min = luminances[luminances.len() * 2 / 100];
+    let l_max = luminances[(luminances.len().saturating_sub(1) * 99) / 100];
     if (l_max - l_min).abs() < 1e-4 {
         return None;
     }

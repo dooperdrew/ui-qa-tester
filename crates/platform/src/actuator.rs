@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 use ui_qa_core::model::{BoundingRect, ControlSource, UiAction, UiElement};
 use ui_qa_sdk::{send_sdk_command, SdkCommand};
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Gdi::ClientToScreen;
+use windows::Win32::Graphics::Gdi::{ClientToScreen, ScreenToClient};
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
 };
@@ -15,8 +15,9 @@ use windows::Win32::UI::Accessibility::{
     UIA_InvokePatternId,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
-    IsWindowVisible, PostMessageW, WM_CHAR, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
+    EnumChildWindows, EnumWindows, GetClassNameW, GetWindowRect, GetWindowTextLengthW,
+    GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible, PostMessageW, WM_CHAR,
+    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
 };
 
 const MK_LBUTTON_FLAG: usize = 0x0001;
@@ -82,6 +83,24 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
     BOOL(1)
 }
 
+/// Discovers all descendant child window HWNDs of a given parent window.
+pub fn find_child_windows_for_hwnd(hwnd: HWND) -> Vec<HWND> {
+    let mut list = Vec::new();
+    let ptr = &mut list as *mut Vec<HWND> as isize;
+    // SAFETY: Passing a stack-owned mutable Vec pointer to synchronous EnumChildWindows callback.
+    unsafe {
+        let _ = EnumChildWindows(hwnd, Some(enum_child_proc), LPARAM(ptr));
+    }
+    list
+}
+
+// SAFETY: Invoked synchronously by EnumChildWindows on the calling thread.
+unsafe extern "system" fn enum_child_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let list = &mut *(lparam.0 as *mut Vec<HWND>);
+    list.push(hwnd);
+    BOOL(1)
+}
+
 /// Extracts the UIA / AccessKit element tree for `hwnd_raw`, normalizing coordinates to client/window relative bounds.
 pub fn inspect_window_uia_elements(hwnd_raw: isize) -> Result<Vec<UiElement>, String> {
     // SAFETY: Initializing COM in MTA mode on current thread.
@@ -103,19 +122,44 @@ pub fn inspect_window_uia_elements(hwnd_raw: isize) -> Result<Vec<UiElement>, St
     unsafe {
         let uia: IUIAutomation = CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)
             .map_err(|e| format!("CoCreateInstance(CUIAutomation) failed: {e}"))?;
-        let root_el = uia
-            .ElementFromHandle(hwnd)
-            .map_err(|e| format!("ElementFromHandle failed: {e}"))?;
-
         let walker = uia
             .ControlViewWalker()
             .map_err(|e| format!("ControlViewWalker failed: {e}"))?;
 
         let mut idx = 0usize;
-        walk_uia_subtree(
-            &walker, &root_el, 1, 5, &mut idx, 120, origin_x, origin_y, &mut out,
-        );
+        if let Ok(root_el) = uia.ElementFromHandle(hwnd) {
+            walk_uia_subtree(
+                &walker, &root_el, 1, 20, &mut idx, 150, origin_x, origin_y, &mut out,
+            );
+        }
+
+        let child_hwnds = find_child_windows_for_hwnd(hwnd);
+        for child in &child_hwnds {
+            if let Ok(child_el) = uia.ElementFromHandle(*child) {
+                walk_uia_subtree(
+                    &walker, &child_el, 1, 20, &mut idx, 150, origin_x, origin_y, &mut out,
+                );
+            }
+        }
+
+        // Chromium / WebView2 accessibility tree is constructed asynchronously on first query.
+        // If web controls haven't hydrated yet, wait 350ms and query child HWNDs once more.
+        if out.len() < 10 && !child_hwnds.is_empty() {
+            std::thread::sleep(std::time::Duration::from_millis(350));
+            for child in &child_hwnds {
+                if let Ok(child_el) = uia.ElementFromHandle(*child) {
+                    walk_uia_subtree(
+                        &walker, &child_el, 1, 20, &mut idx, 150, origin_x, origin_y, &mut out,
+                    );
+                }
+            }
+        }
     }
+
+    out.sort_by_key(|e| (e.bounds.y, e.bounds.x));
+    out.dedup_by(|a, b| {
+        a.bounds == b.bounds && a.name == b.name && a.control_type_id == b.control_type_id
+    });
 
     Ok(out)
 }
@@ -259,6 +303,22 @@ fn control_type_label(id: i32) -> &'static str {
     }
 }
 
+/// Discovers the primary interactive render child HWND (e.g. `Chrome_RenderWidgetHostHWND` for WebView2/CEF)
+/// or falls back to the topmost child / root window.
+pub fn find_render_widget_target(hwnd: HWND) -> HWND {
+    for child in find_child_windows_for_hwnd(hwnd) {
+        let mut class_buf = vec![0u16; 128];
+        let len = unsafe { GetClassNameW(child, &mut class_buf) };
+        if len > 0 {
+            let class_str = String::from_utf16_lossy(&class_buf[..len as usize]);
+            if class_str == "Chrome_RenderWidgetHostHWND" {
+                return child;
+            }
+        }
+    }
+    find_child_windows_for_hwnd(hwnd).first().copied().unwrap_or(hwnd)
+}
+
 /// Dispatches a `UiAction` in the background without stealing focus using:
 /// 1. Optional `ui-qa-sdk` IPC bridge (if connected)
 /// 2. Direct `PostMessageW` to `hwnd_raw` (`WM_MOUSEMOVE` + `WM_LBUTTONDOWN` + `WM_LBUTTONUP` / `WM_CHAR`)
@@ -296,20 +356,31 @@ pub fn dispatch_action_background(
         UiAction::Click {
             element_name, x, y, ..
         } => {
-            if *x <= 0 && *y <= 0 && !element_name.trim().is_empty() {
-                let _ = try_uia_invoke_by_name(hwnd, element_name);
+            let _ = !element_name.trim().is_empty() && try_uia_invoke_by_name(hwnd, element_name);
+            let target_hwnd = find_render_widget_target(hwnd);
+            let mut top_rect = RECT::default();
+            // SAFETY: GetWindowRect reads screen origin of top-level window.
+            unsafe {
+                let _ = GetWindowRect(hwnd, &mut top_rect);
             }
-            let (client_x, client_y) = window_rel_to_client_coords(hwnd, *x, *y);
-            let cx = client_x.max(0) as usize & 0xFFFF;
-            let cy = client_y.max(0) as usize & 0xFFFF;
+            let mut pt = POINT {
+                x: top_rect.left + *x,
+                y: top_rect.top + *y,
+            };
+            // SAFETY: ScreenToClient converts screen coordinate to target child window client coordinate.
+            unsafe {
+                let _ = ScreenToClient(target_hwnd, &mut pt);
+            }
+            let cx = pt.x.max(0) as usize & 0xFFFF;
+            let cy = pt.y.max(0) as usize & 0xFFFF;
             let lparam = LPARAM(((cy << 16) | cx) as isize);
             // SAFETY: PostMessageW enqueues mouse events directly into the target HWND queue without moving the physical cursor.
             unsafe {
-                PostMessageW(hwnd, WM_MOUSEMOVE, WPARAM(0), lparam)
+                PostMessageW(target_hwnd, WM_MOUSEMOVE, WPARAM(0), lparam)
                     .map_err(|e| format!("PostMessageW(WM_MOUSEMOVE) failed: {e}"))?;
-                PostMessageW(hwnd, WM_LBUTTONDOWN, WPARAM(MK_LBUTTON_FLAG), lparam)
+                PostMessageW(target_hwnd, WM_LBUTTONDOWN, WPARAM(MK_LBUTTON_FLAG), lparam)
                     .map_err(|e| format!("PostMessageW(WM_LBUTTONDOWN) failed: {e}"))?;
-                PostMessageW(hwnd, WM_LBUTTONUP, WPARAM(0), lparam)
+                PostMessageW(target_hwnd, WM_LBUTTONUP, WPARAM(0), lparam)
                     .map_err(|e| format!("PostMessageW(WM_LBUTTONUP) failed: {e}"))?;
             }
             Ok(())
@@ -336,25 +407,8 @@ pub fn dispatch_action_background(
     }
 }
 
-fn window_rel_to_client_coords(hwnd: HWND, win_rel_x: i32, win_rel_y: i32) -> (i32, i32) {
-    // SAFETY: GetWindowRect and ClientToScreen read window/client screen origins without mutating state.
-    unsafe {
-        let mut win_rect = RECT::default();
-        if GetWindowRect(hwnd, &mut win_rect).is_err() {
-            return (win_rel_x, win_rel_y);
-        }
-        let mut client_origin = POINT { x: 0, y: 0 };
-        if !ClientToScreen(hwnd, &mut client_origin).as_bool() {
-            return (win_rel_x, win_rel_y);
-        }
-        let offset_x = (client_origin.x - win_rect.left).clamp(0, 64);
-        let offset_y = (client_origin.y - win_rect.top).clamp(0, 64);
-        ((win_rel_x - offset_x).max(0), (win_rel_y - offset_y).max(0))
-    }
-}
-
 fn try_uia_invoke_by_name(hwnd: HWND, target_name: &str) -> bool {
-    // SAFETY: Initializing COM and walking UIA tree up to depth 5 to invoke a matching element via IUIAutomationInvokePattern.
+    // SAFETY: Initializing COM and walking UIA tree up to depth 20 to invoke a matching element via IUIAutomationInvokePattern.
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let Ok(uia) =
@@ -362,13 +416,22 @@ fn try_uia_invoke_by_name(hwnd: HWND, target_name: &str) -> bool {
         else {
             return false;
         };
-        let Ok(root_el) = uia.ElementFromHandle(hwnd) else {
-            return false;
-        };
         let Ok(walker) = uia.ControlViewWalker() else {
             return false;
         };
-        invoke_matching_in_subtree(&walker, &root_el, target_name, 1, 5)
+        if let Ok(root_el) = uia.ElementFromHandle(hwnd) {
+            if invoke_matching_in_subtree(&walker, &root_el, target_name, 1, 20) {
+                return true;
+            }
+        }
+        for child in find_child_windows_for_hwnd(hwnd) {
+            if let Ok(child_el) = uia.ElementFromHandle(child) {
+                if invoke_matching_in_subtree(&walker, &child_el, target_name, 1, 20) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
