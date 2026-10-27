@@ -2,6 +2,23 @@
 
 Chronological record of milestones, decisions and discoveries. Newest first.
 
+## 2026-10-27 — Release v0.2.0 (Milestones 8 & 9: UX Onboarding, Responsive Dashboard, Self-Test QA Matrix & Architecture Explorer)
+- **M9.1 (Guided Windows Setup Wizard):**
+  - Enhanced `scripts/setup-wizard.ps1` with a complete Windows Forms GUI wizard (install destination, Desktop/Start Menu shortcuts, User PATH registration, Windows Settings "Installed apps" uninstaller registration in `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UiQaTester`).
+  - Added production Inno Setup script (`scripts/installer.iss`) and automated manifest generator (`scripts/generate-manifests.ps1`).
+- **M9.2 (First-Run Onboarding Setup Wizard in `ui-qa-ui`):**
+  - Added dedicated **🪄 Setup Wizard** tab in `crates/ui/src/dashboard.html` with instant presets for `egui` / `MagicBridge`, `iced`, `Slint`, and `Win32`, plus live TOML generation and 1-click clipboard copy.
+- **M9.3 (Fluid Responsive Dashboard Layout):**
+  - Added `< 850px` Compact Mode vs `>= 850px` Full Mode with dynamic scrollable rail navigation, collapsing labels into icon pills and reflowing 2-column grids into vertical stacks to eliminate clipping on side-by-side IDE windows and high-DPI displays.
+- **M9.4 (Interactive Subsystem Self-Test & NFR Budget Matrix):**
+  - Added dedicated **🧪 Self-Test & QA Matrix** tab in `crates/ui/src/dashboard.html` with live green `#2ECC71` badges for NFR-P1 (capture latency), NFR-P2 (UIA walker), NFR-S1 (non-intrusive actuation), NFR-P3 (correlator throughput), and NFR-P4 (memory working set), plus 1-click JSON QA verification certificate export.
+- **M8.1 & M8.2 (Architecture Explorer & Specification Hub):**
+  - Added dedicated **🤖 Architecture** tab in `crates/ui/src/dashboard.html` covering the non-intrusive engine, 3-tier background actuation, 7-crate workspace boundaries, and multi-agent complexity tiers (`T1`/`T2`/`T3`).
+  - Created centralized documentation hub `docs/README.md`, UX improvements backlog `docs/07-ux-and-improvements.md`, community plan `docs/08-community-and-growth-strategy.md`, and `docs/release-methodology.md`.
+- **Live Empirical Verification on `MagicBridge` (`eframe`/`egui` 0.31):**
+  - Tested live against `magicbridge-settings.exe` (PID 39116): clicked `"Start Agent"` over IPC, explored 5 distinct screens, and caught real `VIS-CLIP` horizontal overflow and `A11Y-NAME` missing labels. Added [`examples/magicbridge-qa-session.toml`](examples/magicbridge-qa-session.toml).
+
+
 ## 2026-10-26 — Milestone 7 (M7.1): Project Retrospective
 - Completed `M7.1`: Authored `docs/retrospective.md` documenting the M0–M6 delivery timeline, empirical NFR measurements, Windows UIA MSAA timeout discovery, and Rust 1.99 clippy lessons.
 

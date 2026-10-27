@@ -1,17 +1,31 @@
 {
-    "version":  "0.1.0",
-    "architecture":  {
-                         "64bit":  {
-                                       "hash":  "8456cd7f2ab19dae442f52695693bbd92563ec5329d251971dbdf4fcbd512166",
-                                       "url":  "https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.1.0/ui-qa-tester-v0.1.0-windows-x64.zip"
-                                   }
-                     },
-    "description":  "Autonomous Windows UI \u0026 Hardware-in-the-Loop QA Agent for Rust Native GUI Apps (iced, egui, Slint)",
-    "homepage":  "https://github.com/DooperDrew/ui-qa-tester",
-    "bin":  [
-                "ui-qa-ui.exe",
-                "ui-qa-cli.exe",
-                "ui-qa-probe.exe"
-            ],
-    "license":  "MIT"
+  "version": "0.2.0",
+  "description": "Autonomous, non-intrusive Windows UI and Hardware-in-the-Loop (HIL) QA Agent for Rust desktop apps.",
+  "homepage": "https://github.com/DooperDrew/ui-qa-tester",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.0/ui-qa-tester-v0.2.0-windows-x64.zip",
+      "hash": "774fd529748cfc77d13d30f73fabc14a507d145bdb82a4419642862286169dbf"
+    }
+  },
+  "bin": [
+    "ui-qa-cli.exe",
+    "ui-qa-ui.exe",
+    "ui-qa-probe.exe"
+  ],
+  "shortcuts": [
+    [
+      "ui-qa-ui.exe",
+      "UI QA Tester"
+    ]
+  ],
+  "checkver": "github",
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/DooperDrew/ui-qa-tester/releases/download/v$version/ui-qa-tester-v$version-windows-x64.zip"
+      }
+    }
+  }
 }

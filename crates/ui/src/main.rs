@@ -191,6 +191,9 @@ mod tests {
         assert!(DASHBOARD_HTML.contains("tab-live"));
         assert!(DASHBOARD_HTML.contains("tab-findings"));
         assert!(DASHBOARD_HTML.contains("tab-diff"));
+        assert!(DASHBOARD_HTML.contains("tab-wizard"));
+        assert!(DASHBOARD_HTML.contains("tab-selftest"));
+        assert!(DASHBOARD_HTML.contains("tab-architecture"));
         assert!(DASHBOARD_HTML.contains("/api/run"));
     }
 }

@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: DooperDrew.UiQaTester
+PackageVersion: 0.2.0
+PackageLocale: en-US
+Publisher: DooperDrew
+PublisherUrl: https://github.com/DooperDrew
+PackageName: UI QA Tester
+PackageUrl: https://github.com/DooperDrew/ui-qa-tester
+License: MIT
+LicenseUrl: https://github.com/DooperDrew/ui-qa-tester/blob/main/LICENSE
+ShortDescription: Autonomous, non-intrusive Windows UI and Hardware-in-the-Loop (HIL) QA Agent for Rust desktop apps.
+Tags:
+  - qa
+  - testing
+  - windows
+  - ui-automation
+  - rust
+  - egui
+  - iced
+  - slint
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

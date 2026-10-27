@@ -1,0 +1,27 @@
+name: "🧪 Target App & Hardware QA Verification"
+description: "Report empirical QA results from testing a Windows GUI + Hardware app with ui-qa-tester"
+title: "[QA] <App Name / Framework>: <Summary>"
+labels: ["qa-verification"]
+body:
+  - type: input
+    id: target_app
+    attributes:
+      label: "Target Application & GUI Framework"
+      description: "e.g., MagicBridge v0.2.0 (eframe/egui 0.31), Slint Industrial HMI, iced Serial Monitor"
+      placeholder: "MagicBridge (eframe/egui 0.31)"
+    validations:
+      required: true
+  - type: input
+    id: hardware_device
+    attributes:
+      label: "Connected Hardware / Telemetry Source"
+      description: "e.g., Apple Magic Keyboard A1843 (USB/BT HID), STM32 COM3 @ 115200 bps, Named Pipe IPC"
+    validations:
+      required: false
+  - type: textarea
+    id: report_summary
+    attributes:
+      label: "Empirical QA Report Summary"
+      description: "Paste the summary and findings from qa-reports/report.md or Self-Test QA export"
+    validations:
+      required: true

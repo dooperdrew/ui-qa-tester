@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: DooperDrew.UiQaTester
+PackageVersion: 0.2.0
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: ui-qa-cli.exe
+    PortableCommandAlias: ui-qa-cli
+  - RelativeFilePath: ui-qa-ui.exe
+    PortableCommandAlias: ui-qa-ui
+  - RelativeFilePath: ui-qa-probe.exe
+    PortableCommandAlias: ui-qa-probe
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.0/ui-qa-tester-v0.2.0-windows-x64.zip
+    InstallerSha256: 774FD529748CFC77D13D30F73FABC14A507D145BDB82A4419642862286169DBF
+ManifestType: installer
+ManifestVersion: 1.6.0

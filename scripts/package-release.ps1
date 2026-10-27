@@ -33,6 +33,7 @@ if (Test-Path $StageDir) { Remove-Item -Path $StageDir -Recurse -Force }
 if (Test-Path $ZipPath) { Remove-Item -Path $ZipPath -Force }
 New-Item -ItemType Directory -Path $StageDir -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $StageDir "locales") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $StageDir "examples") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $StageDir "scripts") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $StageDir "docs") -Force | Out-Null
 
@@ -40,15 +41,21 @@ Copy-Item (Join-Path $RepoRoot "target\release\ui-qa-ui.exe") $StageDir
 Copy-Item (Join-Path $RepoRoot "target\release\ui-qa-cli.exe") $StageDir
 Copy-Item (Join-Path $RepoRoot "target\release\ui-qa-probe.exe") $StageDir
 Copy-Item (Join-Path $RepoRoot "locales\*.json") (Join-Path $StageDir "locales")
+Copy-Item (Join-Path $RepoRoot "examples\*.toml") (Join-Path $StageDir "examples")
 Copy-Item (Join-Path $RepoRoot "README.md") $StageDir
 Copy-Item (Join-Path $RepoRoot "LICENSE") $StageDir
-Copy-Item (Join-Path $RepoRoot "docs\user-guide.md") $StageDir
-Copy-Item (Join-Path $RepoRoot "docs\user-guide.md") (Join-Path $StageDir "docs\user-guide.md")
+Copy-Item (Join-Path $RepoRoot "CHANGELOG.md") $StageDir
+Copy-Item (Join-Path $RepoRoot "docs\*.md") (Join-Path $StageDir "docs")
 Copy-Item (Join-Path $RepoRoot "setup.cmd") $StageDir
 Copy-Item (Join-Path $RepoRoot "scripts\setup-wizard.ps1") $StageDir
 Copy-Item (Join-Path $RepoRoot "scripts\install.ps1") $StageDir
 Copy-Item (Join-Path $RepoRoot "scripts\uninstall.ps1") $StageDir
-Copy-Item (Join-Path $RepoRoot "scripts\*.ps1") (Join-Path $StageDir "scripts")
+Copy-Item (Join-Path $RepoRoot "scripts\*") (Join-Path $StageDir "scripts")
 
 Compress-Archive -Path "$StageDir\*" -DestinationPath $ZipPath -Force
 Write-Host "Packaged portable release archive: $ZipPath"
+
+$GenScript = Join-Path $PSScriptRoot "generate-manifests.ps1"
+if (Test-Path $GenScript) {
+    & $GenScript -Version $Version -ZipPath $ZipPath
+}

@@ -50,3 +50,14 @@
 
 ## M7 — Retrospective
 - [x] **M7.1** Run the `project-retrospective` skill, produce `docs/retrospective.md`, and record `[KIT]` lessons in `docs/lessons-learned.md`. *(2026-10-26, M7)*
+
+## M8 — Multi-Agent Architecture & UI Explorer
+- [x] **M8.1** Create comprehensive didactic multi-agent guide (`docs/multi-agent-methodology.md`), centralized specification hub (`docs/README.md`), and ecosystem growth strategy (`docs/08-community-and-growth-strategy.md`). *(2026-10-27, v0.2.0)*
+- [x] **M8.2** Add dedicated **"🤖 Architecture"** tab in `ui-qa-ui` (`crates/ui/src/dashboard.html`) covering the non-intrusive engine, 3-tier actuation, and complexity tier taxonomy (`T1`/`T2`/`T3`). *(2026-10-27, v0.2.0)*
+
+## M9 — User Experience Onboarding & Interactive QA Matrix
+- [x] **M9.1** Guided Windows Installation Wizard (`scripts/setup-wizard.ps1`, `setup.cmd`, `scripts/installer.iss`): zero-elevation install into `%LOCALAPPDATA%\Programs\ui-qa-tester`, Desktop/Start Menu shortcuts, User PATH, and Windows "Installed apps" registration. *(2026-10-27, v0.2.0)*
+- [x] **M9.2** First-Run Onboarding Setup Wizard in `ui-qa-ui` (`🪄 Setup Wizard` tab) with presets for `egui`/`MagicBridge`, `iced`, `Slint`, and `Win32`, plus live TOML generation. *(2026-10-27, v0.2.0)*
+- [x] **M9.3** Responsive Dashboard Layout (`< 850px` Compact Mode vs `>= 850px` Full Mode) with dynamic scrollable rail navigation avoiding clipping on narrow windows and 4K displays. *(2026-10-27, v0.2.0)*
+- [x] **M9.4** Interactive Subsystem Self-Test & NFR Budget Matrix (`🧪 Self-Test & QA` tab) with live green `#2ECC71` badges and 1-click JSON/Markdown QA certificate export. *(2026-10-27, v0.2.0)*
+**Exit:** Comprehensive UX onboarding wizard, interactive QA self-test matrix, responsive dashboard UI, and v0.2.0 release packaged. *(MET 2026-10-27)*

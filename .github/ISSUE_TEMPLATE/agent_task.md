@@ -1,42 +1,27 @@
 ---
-name: "🤖 Agent Implementation Task"
-about: Structured implementation task designed for GitHub Copilot Agent or autonomous worker subagents
-title: "[Task]: "
-labels: ["agent-task", "enhancement"]
-assignees: []
+name: "🤖 Agent Task (Markdown)"
+about: "Bounded implementation task for GitHub Copilot Agent or local project-worker subagent"
+title: "[Task] M<x>.<y>: <Short Summary>"
+labels: ["agent-task"]
 ---
 
-## 🎯 Task Objective & Scope
-<!-- A clear 1-2 sentence description of what needs to be implemented and why -->
+## Task ID & Complexity Tier
+- **Roadmap ID:** `M<x>.<y>`
+- **Tier:** `[T1 Lean | T2 Moderate | T3 Critical]`
+- **Target Model:** `[flash_lite | flash | pro | inherit]`
 
-## 📊 Complexity Tier & Target
-- **Complexity Tier:** Tier 1 (Lean) | Tier 2 (Moderate) | Tier 3 (Complex / Critical)
-- **Target Module / Package:** `crates/core` | `crates/platform` | `crates/ai` | `crates/sdk` | `crates/cli` | `crates/ui`
-- **Target Files (Explicit Ownership):**
-  - `path/to/target/file`
-  - `path/to/test/file`
+## Owned Files (Strict Scope)
+- `crates/...`
 
-## 🛡️ Architectural & Performance Invariants
-<!-- Specify any critical constraints (check all that apply) -->
-- [ ] **Pure Logic:** Core logic isolated from side effects, 100% unit-tested (`#![forbid(unsafe_code)]`).
-- [ ] **Performance Budgets:** Comply with non-functional budgets defined in `docs/02-requirements.md`.
-- [ ] **Safety & Invariants:** Any unsafe operations in `crates/platform` must have documented `// SAFETY:` invariants.
-- [ ] **Localization:** User-facing strings must reside in `locales/en.json` and `locales/it.json`.
-- [ ] **Claims Follow Evidence:** Never claim a test or benchmark passed without running it.
+## Invariants & Hard Rules
+- `#![forbid(unsafe_code)]` in `crates/core`, `crates/ai`, `crates/sdk`, and `crates/cli`.
+- Every `unsafe` block in `crates/platform` must have a `// SAFETY:` comment.
+- Never call `SetForegroundWindow`, `SetCursorPos`, or `SendInput` in default `focus_mode = "background"`.
+- Deliver via Draft PR on `task/<issue-id>-<slug>` (Sole Committer Protocol).
 
-## 📝 Implementation Instructions
-<!-- Step-by-step guidance for the coding agent -->
-1. 
-2. 
-3. 
-
-## ✅ Verifiable Acceptance Criteria
-<!-- Checkboxes that can be verified mechanically -->
-- [ ] Unit tests added covering all new logic, branches, and error cases.
-- [ ] `cargo fmt --all -- --check` passes cleanly.
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings` produces zero warnings or errors.
-- [ ] `cargo test --workspace` passes 100%.
-- [ ] `cargo build --workspace --release` succeeds.
-
-## 🔄 Sole Committer Protocol Reminder
-> **Note for AI Agents:** Deliver your changes via a **Draft Pull Request** on branch `task/<issue-id>-<description>`. Do not commit directly to `main` or attempt to close this issue. The Lead Agent (Antigravity) will review, run the integration verification gate, and merge.
+## Acceptance Criteria
+- [ ] Implementation complete in owned files
+- [ ] Unit tests added/updated
+- [ ] `cargo fmt --all -- --check` passes
+- [ ] `cargo clippy --workspace --all-targets -- -D warnings` passes
+- [ ] `cargo test --workspace` passes
