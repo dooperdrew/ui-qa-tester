@@ -1,12 +1,12 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Autonomous, non-intrusive Windows UI and Hardware-in-the-Loop (HIL) QA Agent for Rust desktop apps.",
   "homepage": "https://github.com/DooperDrew/ui-qa-tester",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.0/ui-qa-tester-v0.2.0-windows-x64.zip",
-      "hash": "f948e3341423b342fa96800f8ecd048e85fd95237152783369071913d83ecc63"
+      "url": "https://github.com/DooperDrew/ui-qa-tester/releases/download/v0.2.1/ui-qa-tester-v0.2.1-windows-x64.zip",
+      "hash": "45b5879b17d21fa996c07e39516c8506ae606cb573ecf91d759b8cacd2995268"
     }
   },
   "bin": [
